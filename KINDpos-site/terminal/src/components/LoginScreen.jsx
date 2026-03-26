@@ -1,19 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
-const C = {
-  gray: "#c0c0c0", dg: "#808080", navy: "#000080", blue: "#1084d0",
-  white: "#fff", black: "#000"
-};
-
-const RAISED = `${C.white} ${C.dg} ${C.dg} ${C.white}`;
-const SUNKEN = `${C.dg} ${C.white} ${C.white} ${C.dg}`;
-
-const T = {
-  body: { padding: 12, flex: 1, display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" },
-  btn: { background: C.gray, border: "2px solid", borderColor: RAISED, padding: "4px 14px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", minWidth: 80, color: C.black, whiteSpace: "nowrap", lineHeight: 1.2 },
-  inp: { border: "2px solid", borderColor: SUNKEN, background: C.white, padding: "2px 4px", fontSize: 11, fontFamily: "inherit", outline: "none" },
-  sep: { height: 0, borderTop: `1px solid ${C.dg}`, borderBottom: `1px solid ${C.white}`, margin: "6px 0" },
-};
+const FH = "'Alien Encounters Solid Bold', sans-serif";
+const FB = "'Sevastopol Interface', sans-serif";
 
 export default function LoginScreen({ onLogin, roster = [] }) {
   const [pin, setPin] = useState("");
@@ -33,7 +21,7 @@ export default function LoginScreen({ onLogin, roster = [] }) {
     if (pin.length < 6) setPin(p => p + key);
   };
 
-  const submit = useCallback(() => {
+  const submit = () => {
     if (!pin) return;
     const staff = roster.find(r => r.pin === pin);
     if (!staff) {
@@ -42,7 +30,7 @@ export default function LoginScreen({ onLogin, roster = [] }) {
       return;
     }
     onLogin(staff);
-  }, [pin, roster, onLogin]);
+  };
 
   const onClrDown = () => {
     holdTimer.current = setTimeout(() => { setPin(""); setError(""); }, 600);
@@ -51,70 +39,91 @@ export default function LoginScreen({ onLogin, roster = [] }) {
 
   const PAD = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["CLR", "0", ">>>"]];
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key >= '0' && e.key <= '9') press(e.key);
-    else if (e.key === 'Backspace') press("CLR");
-    else if (e.key === 'Enter') submit();
-    else if (e.key === 'Escape') { setPin(""); setError(""); }
-  }, [pin, submit]);
-
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key >= '0' && e.key <= '9') press(e.key);
+      else if (e.key === 'Backspace') press("CLR");
+      else if (e.key === 'Enter') submit();
+      else if (e.key === 'Escape') { setPin(""); setError(""); }
+    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  });
 
   return (
-    <div style={T.body}>
-      <div style={{ textAlign: "center", paddingTop: 8 }}>
-        <div style={{ fontSize: 22, fontWeight: "bold", color: C.navy, letterSpacing: 4, fontFamily: "'Alien Encounters', sans-serif" }}>KINDpos</div>
+    <div style={{
+      flex: 1, background: "#333333", display: "flex",
+      alignItems: "center", justifyContent: "center", position: "relative",
+    }}>
+      {/* Left: PIN Frame */}
+      <div style={{
+        width: 287, height: 353, border: "6px solid #C6FFBB",
+        background: "#333333", borderRadius: 12,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", gap: 16,
+        marginRight: 40,
+      }}>
+        <div style={{ fontFamily: FH, fontSize: 22, color: "#C6FFBB", letterSpacing: 4 }}>
+          KINDpos
+        </div>
+
+        {/* PIN dots */}
+        <div style={{
+          width: 200, height: 50, border: "2px solid #C6FFBB",
+          borderRadius: 8, background: "#222222",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+        }}>
+          {pin.length === 0
+            ? <span style={{ color: "#C6FFBB", opacity: 0.4, fontSize: 12, fontFamily: FB }}>enter PIN</span>
+            : Array.from({ length: pin.length }).map((_, i) => (
+              <span key={i} style={{ fontSize: 24, color: "#C6FFBB", lineHeight: 1 }}>&#x2B22;</span>
+            ))
+          }
+        </div>
+
+        {error && (
+          <div style={{
+            background: "rgba(232,64,64,0.15)", border: "1px solid #E84040",
+            padding: "4px 12px", fontSize: 12, color: "#E84040",
+            fontFamily: FB, borderRadius: 4, maxWidth: 220, textAlign: "center",
+          }}>
+            {error}
+          </div>
+        )}
       </div>
 
-      <div style={T.sep} />
-
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 172 }}>
-          <div style={{ border: "2px solid", borderColor: SUNKEN, background: C.white, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            {pin.length === 0
-              ? <span style={{ color: C.dg, fontSize: 10 }}>enter PIN</span>
-              : Array.from({ length: pin.length }).map((_, i) => (
-                <span key={i} style={{ fontSize: 20, lineHeight: 1, color: C.navy }}>●</span>
-              ))
-            }
-          </div>
-          {error && (
-            <div style={{ background: "#ffcccc", border: `1px solid #cc0000`, padding: "2px 6px", fontSize: 10, marginTop: 4, color: "#660000" }}>
-              ⚠ {error}
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4 }}>
-          {PAD.flat().map(key => {
-            const isCLR = key === "CLR";
-            const isENT = key === ">>>";
-            return (
-              <button
-                key={key}
-                onClick={() => press(key)}
-                onMouseDown={isCLR ? onClrDown : undefined}
-                onMouseUp={isCLR ? onClrUp : undefined}
-                onMouseLeave={isCLR ? onClrUp : undefined}
-                onTouchStart={isCLR ? onClrDown : undefined}
-                onTouchEnd={isCLR ? onClrUp : undefined}
-                style={{
-                  ...T.btn,
-                  width: 56, height: 48, padding: 0, minWidth: 0,
-                  fontSize: isENT ? 11 : 16,
-                  fontWeight: "bold",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: isCLR ? "#d4d0c8" : isENT ? C.navy : C.gray,
-                  color: isENT ? C.white : C.black,
-                  letterSpacing: isENT ? 1 : 0,
-                }}
-              >{key}</button>
-            );
-          })}
-        </div>
+      {/* Center: Numpad */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(3, 82px)",
+        gridTemplateRows: "repeat(4, 74px)", gap: "12px 6px",
+      }}>
+        {PAD.flat().map(key => {
+          const isCLR = key === "CLR";
+          const isENT = key === ">>>";
+          const isDigit = !isCLR && !isENT;
+          return (
+            <button
+              key={key}
+              onClick={() => press(key)}
+              onMouseDown={isCLR ? onClrDown : undefined}
+              onMouseUp={isCLR ? onClrUp : undefined}
+              onMouseLeave={isCLR ? onClrUp : undefined}
+              onTouchStart={isCLR ? onClrDown : undefined}
+              onTouchEnd={isCLR ? onClrUp : undefined}
+              style={{
+                background: isCLR ? "#E84040" : isENT ? "#C6FFBB" : "#333333",
+                color: isDigit ? "#C6FFBB" : "#333333",
+                border: isDigit ? "1px solid #C6FFBB" : "none",
+                borderRadius: 8,
+                fontFamily: FB,
+                fontSize: isCLR || isENT ? 18 : 24,
+                fontWeight: "bold",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >{key}</button>
+          );
+        })}
       </div>
     </div>
   );

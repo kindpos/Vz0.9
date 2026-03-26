@@ -1,128 +1,139 @@
-import { useState, useMemo } from 'react';
-import { API_BASE, FALLBACK_ROSTER } from '../config';
+import { useState } from 'react';
+import { API_BASE } from '../config';
+
+const FH = "'Alien Encounters Solid Bold', sans-serif";
+const FB = "'Sevastopol Interface', sans-serif";
 
 const C = {
-  gray: "#c0c0c0", dg: "#808080", navy: "#000080", blue: "#1084d0",
-  white: "#fff", black: "#000", mint: "#c6ffbb", yellow: "#fbde42", softred: "#ff6b6b",
-};
-const RAISED = `${C.white} ${C.dg} ${C.dg} ${C.white}`;
-const SUNKEN = `${C.dg} ${C.white} ${C.white} ${C.dg}`;
-
-const T = {
-  btn: { background: C.gray, border: "2px solid", borderColor: RAISED, padding: "4px 14px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", minWidth: 80, color: C.black, whiteSpace: "nowrap", lineHeight: 1.2 },
-  inp: { border: "2px solid", borderColor: SUNKEN, background: C.white, padding: "2px 4px", fontSize: 11, fontFamily: "inherit", outline: "none" },
-  tbtn: { width: 16, height: 14, background: C.gray, border: "2px solid", borderColor: RAISED, fontSize: 8, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: C.black, padding: 0, lineHeight: 1, fontFamily: "inherit" },
+  bg: "#333333", mint: "#C6FFBB", yellow: "#FBDE42", red: "#E84040",
 };
 
-function SideCard({ label, expanded, onToggle, onNav, children }) {
+function Card({ title, expanded, onToggle, onNav, children }) {
   return (
-    <div style={{ border: "2px solid", borderColor: expanded ? SUNKEN : RAISED, marginBottom: 6, background: C.gray }}>
-      <div style={{
+    <div style={{
+      border: `2px solid ${C.mint}`, borderRadius: 8,
+      background: C.bg, overflow: "hidden", marginBottom: 8,
+      display: "flex", flexDirection: "column",
+      flex: expanded ? 1 : "0 0 auto",
+      transition: "all 0.2s ease-in-out",
+    }}>
+      <div onClick={onNav || onToggle} style={{
+        background: C.mint, color: C.bg, fontFamily: FH,
+        padding: "0 10px", minHeight: 27,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "4px 8px", cursor: "pointer", userSelect: "none",
-        background: expanded ? "#d4d0c8" : C.gray,
-        borderBottom: expanded ? `1px solid ${C.dg}` : "none",
+        cursor: "pointer", userSelect: "none",
+        borderTopLeftRadius: 6, borderTopRightRadius: 6,
       }}>
-        <span onClick={onNav || onToggle} style={{ fontWeight: "bold", fontSize: 11, flex: 1 }}>{label}</span>
-        <span onClick={onToggle} style={{
-          width: 16, height: 16, border: "2px solid", borderColor: expanded ? SUNKEN : RAISED,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 14, lineHeight: 1, fontWeight: "bold", background: C.gray,
-          userSelect: "none",
+        <span style={{ fontSize: 14 }}>{title}</span>
+        <span onClick={(e) => { e.stopPropagation(); onToggle(); }} style={{
+          width: 20, height: 20, display: "flex", alignItems: "center",
+          justifyContent: "center", fontWeight: "bold", fontSize: 16,
         }}>{expanded ? "−" : "+"}</span>
       </div>
-      {expanded && <div style={{ padding: "8px" }}>{children}</div>}
+      {expanded && (
+        <div style={{ padding: 8, color: C.mint, fontFamily: FB, fontSize: 12, flex: 1 }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
 
-const CHECK_COLORS = { open: C.mint, printed: C.yellow, idle: C.softred };
-
-function CheckBtn({ order, selected, onToggle }) {
-  const bg = CHECK_COLORS[order.status] || C.white;
+function TableTile({ order, selected, onToggle }) {
   return (
     <div onClick={onToggle} style={{
-      width: 68, height: 68, border: "2px solid",
-      borderColor: selected ? SUNKEN : RAISED,
-      background: selected ? "#d4d0c8" : bg,
-      cursor: "pointer", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: 2, userSelect: "none",
-      boxShadow: selected ? `inset 1px 1px 2px ${C.dg}` : "none",
-      outline: selected ? `2px solid ${C.navy}` : "none",
-      outlineOffset: -2,
+      width: 78, height: 77,
+      border: `2px solid ${C.mint}`,
+      background: selected ? C.mint : C.bg,
+      color: selected ? C.bg : C.mint,
+      borderRadius: 8, cursor: "pointer",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 2,
+      fontFamily: FB, userSelect: "none",
     }}>
-      <span style={{ fontSize: 10, fontWeight: "bold", color: C.black }}>{order.table || order.label || (order.order_id || order.id || '').replace("ORD-", "#")}</span>
-      <span style={{ fontSize: 9, color: C.dg }}>{order.guest_count}g</span>
-      <span style={{ fontSize: 9, fontWeight: "bold" }}>{typeof order.total === 'number' ? "$" + order.total.toFixed(2) : order.total}</span>
+      <span style={{ fontSize: 13, fontWeight: "bold" }}>{order.table || order.label || (order.order_id || order.id || '').replace("ORD-", "#")}</span>
+      <span style={{ fontSize: 10, opacity: 0.7 }}>{order.guest_count}g</span>
+      <span style={{ fontSize: 10, color: selected ? C.bg : C.yellow, fontWeight: "bold" }}>
+        {typeof order.total === 'number' ? "$" + order.total.toFixed(2) : order.total}
+      </span>
     </div>
   );
 }
 
-function CheckPanel({ orders, onClose, onOpenOrder, onEdit }) {
+function EditBar({ orders, onClose, onOpenOrder, onEdit }) {
   const multi = orders.length > 1;
   return (
     <div style={{
-      borderTop: "2px solid", borderColor: RAISED,
-      background: C.gray, padding: "8px 10px",
+      background: C.mint, color: C.bg, padding: "6px 12px",
+      fontFamily: FH, fontSize: 12,
+      display: "flex", alignItems: "center", gap: 8,
+      position: "absolute", bottom: 0, left: 0, right: 0,
     }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontWeight: "bold", fontSize: 11 }}>
-          {multi ? `${orders.length} Checks Selected` : `Check ${orders[0].order_id || orders[0].id}`}
-        </span>
-        <span style={{ flex: 1 }} />
-        <button onClick={onClose} style={{ ...T.btn, minWidth: 0, padding: "1px 6px", fontSize: 10, background: "#c00020", color: "#fff", borderColor: "#ff6060 #800010 #800010 #ff6060", fontWeight: "bold" }}>✕</button>
-      </div>
-      {!multi && (
-        <div style={{ fontSize: 10, color: C.dg, marginBottom: 6 }}>
-          {orders[0].server_name || orders[0].server}  ·  {orders[0].guest_count} guest{orders[0].guest_count > 1 ? "s" : ""}  ·  {orders[0].elapsed || "--"}  ·  {typeof orders[0].total === 'number' ? "$" + orders[0].total.toFixed(2) : orders[0].total}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      <span style={{ flex: 1 }}>
+        {multi ? `${orders.length} SELECTED` : `${orders[0].table || orders[0].label || orders[0].id}`}
+      </span>
+      <div style={{ display: "flex", gap: 6 }}>
         {!multi && <>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }} onClick={() => onOpenOrder && onOpenOrder(orders[0])}>Open Check</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }} onClick={() => onEdit && onEdit(orders[0])}>Edit</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }}>Print</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }}>Payment</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }}>Transfer</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10, color: "#990000" }}>Void</button>
+          <button onClick={() => onOpenOrder && onOpenOrder(orders[0])} style={editBtn}>OPEN</button>
+          <button onClick={() => onEdit && onEdit(orders[0])} style={editBtn}>EDIT</button>
+          <button style={editBtn}>PRINT</button>
+          <button style={editBtn}>PAY</button>
         </>}
         {multi && <>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }}>Merge Checks</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }}>Print All</button>
-          <button style={{ ...T.btn, minWidth: 0, padding: "3px 10px", fontSize: 10 }}>Close All</button>
+          <button style={editBtn}>MERGE</button>
+          <button style={editBtn}>PRINT ALL</button>
         </>}
       </div>
+      <button onClick={onClose} style={{ ...editBtn, background: C.red, color: C.bg, border: "none" }}>X</button>
     </div>
   );
 }
+
+const editBtn = {
+  background: C.bg, color: C.mint, border: "none",
+  padding: "4px 10px", fontFamily: FB, fontSize: 11,
+  cursor: "pointer", borderRadius: 4,
+};
 
 function NewCheckDialog({ onConfirm, onCancel }) {
   const [name, setName] = useState("");
   const [guests, setGuests] = useState(null);
   const ready = guests !== null;
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-      <div style={{ background: C.gray, border: "2px solid", borderColor: RAISED, minWidth: 300, boxShadow: `3px 3px 0 ${C.black}` }}>
-        <div style={{ background: `linear-gradient(90deg,${C.navy},${C.blue})`, color: C.white, padding: "3px 8px", display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: "bold", userSelect: "none" }}>
-          <span>New Check</span>
-          <button onClick={onCancel} style={{ ...T.tbtn, background: "#c00020", color: "#fff", borderColor: "#ff6060 #800010 #800010 #ff6060", fontWeight: "bold" }}>✕</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+      <div style={{ background: C.bg, border: `2px solid ${C.mint}`, borderRadius: 8, minWidth: 320, overflow: "hidden" }}>
+        <div style={{ background: C.mint, color: C.bg, padding: "4px 12px", fontFamily: FH, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>NEW CHECK</span>
+          <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.bg, fontFamily: FH, fontSize: 16, cursor: "pointer" }}>X</button>
         </div>
-        <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 10, color: C.dg }}>Table Name <span style={{ fontStyle: "italic" }}>(optional)</span></label>
-            <input style={{ ...T.inp, fontSize: 12 }} placeholder="e.g. Window 2, Bar 4…" value={name} onChange={e => setName(e.target.value)} maxLength={20} />
+            <label style={{ fontSize: 12, color: C.mint, opacity: 0.7, fontFamily: FB }}>Table Name <span style={{ fontStyle: "italic" }}>(optional)</span></label>
+            <input style={{ background: "#222", border: `1px solid ${C.mint}`, color: C.mint, padding: "6px 8px", fontFamily: FB, fontSize: 14, borderRadius: 4, outline: "none" }}
+              placeholder="e.g. Window 2, Bar 4..." value={name} onChange={e => setName(e.target.value)} maxLength={20} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 10, color: C.dg }}>Guests</label>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <label style={{ fontSize: 12, color: C.mint, opacity: 0.7, fontFamily: FB }}>Guests</label>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                <button key={n} onClick={() => setGuests(n)} style={{ ...T.btn, width: 48, height: 40, padding: 0, minWidth: 0, fontSize: 15, fontWeight: "bold", background: guests === n ? C.navy : C.gray, color: guests === n ? C.white : C.black, borderColor: guests === n ? SUNKEN : RAISED }}>{n}</button>
+                <button key={n} onClick={() => setGuests(n)} style={{
+                  width: 48, height: 44, borderRadius: 8,
+                  background: guests === n ? C.mint : C.bg,
+                  color: guests === n ? C.bg : C.mint,
+                  border: `1px solid ${C.mint}`, fontSize: 18, fontWeight: "bold",
+                  fontFamily: FB, cursor: "pointer",
+                }}>{n}</button>
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
-            <button onClick={onCancel} style={T.btn}>Cancel</button>
-            <button onClick={() => ready && onConfirm({ name: name.trim(), guests })} style={{ ...T.btn, fontWeight: "bold", background: ready ? C.navy : C.gray, color: ready ? C.white : C.dg, borderColor: ready ? `#4060a0 #000060 #000060 #4060a0` : RAISED, cursor: ready ? "pointer" : "not-allowed" }}>Open Check  ▶</button>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+            <button onClick={onCancel} style={{ background: C.bg, color: C.mint, border: `1px solid ${C.mint}`, padding: "6px 14px", borderRadius: 8, fontFamily: FB, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+            <button onClick={() => ready && onConfirm({ name: name.trim(), guests })} style={{
+              background: ready ? C.mint : C.bg, color: ready ? C.bg : C.mint,
+              border: `1px solid ${C.mint}`, padding: "6px 14px", borderRadius: 8,
+              fontFamily: FB, fontSize: 14, fontWeight: "bold",
+              cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.4,
+            }}>Open Check</button>
           </div>
         </div>
       </div>
@@ -134,28 +145,29 @@ function GuestEditDialog({ order, onConfirm, onCancel }) {
   const [name, setName] = useState(order.label || "");
   const [guests, setGuests] = useState(order.guest_count);
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-      <div style={{ background: C.gray, border: "2px solid", borderColor: RAISED, minWidth: 280, boxShadow: `3px 3px 0 ${C.black}` }}>
-        <div style={{ background: `linear-gradient(90deg,${C.navy},${C.blue})`, color: C.white, padding: "3px 8px", display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: "bold", userSelect: "none" }}>
-          <span>Edit — {order.id}</span>
-          <button onClick={onCancel} style={{ ...T.tbtn, background: "#c00020", color: "#fff", borderColor: "#ff6060 #800010 #800010 #ff6060", fontWeight: "bold" }}>✕</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+      <div style={{ background: C.bg, border: `2px solid ${C.mint}`, borderRadius: 8, minWidth: 300, overflow: "hidden" }}>
+        <div style={{ background: C.mint, color: C.bg, padding: "4px 12px", fontFamily: FH, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>EDIT — {order.id}</span>
+          <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.bg, fontFamily: FH, fontSize: 16, cursor: "pointer" }}>X</button>
         </div>
-        <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 10, color: C.dg }}>Table Name</label>
-            <input style={{ ...T.inp, fontSize: 12 }} value={name} onChange={e => setName(e.target.value)} maxLength={20} />
+            <label style={{ fontSize: 12, color: C.mint, opacity: 0.7, fontFamily: FB }}>Table Name</label>
+            <input style={{ background: "#222", border: `1px solid ${C.mint}`, color: C.mint, padding: "6px 8px", fontFamily: FB, fontSize: 14, borderRadius: 4, outline: "none" }}
+              value={name} onChange={e => setName(e.target.value)} maxLength={20} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 10, color: C.dg }}>Guests</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button onClick={() => setGuests(g => Math.max(1, g - 1))} style={{ ...T.btn, minWidth: 0, width: 36, height: 36, padding: 0, fontSize: 18, fontWeight: "bold" }}>−</button>
-              <span style={{ fontSize: 18, fontWeight: "bold", minWidth: 30, textAlign: "center" }}>{guests}</span>
-              <button onClick={() => setGuests(g => Math.min(20, g + 1))} style={{ ...T.btn, minWidth: 0, width: 36, height: 36, padding: 0, fontSize: 18, fontWeight: "bold" }}>+</button>
+            <label style={{ fontSize: 12, color: C.mint, opacity: 0.7, fontFamily: FB }}>Guests</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => setGuests(g => Math.max(1, g - 1))} style={{ width: 40, height: 40, borderRadius: 8, background: C.bg, color: C.mint, border: `1px solid ${C.mint}`, fontSize: 20, fontWeight: "bold", cursor: "pointer" }}>−</button>
+              <span style={{ fontSize: 22, fontWeight: "bold", color: C.mint, fontFamily: FB, minWidth: 30, textAlign: "center" }}>{guests}</span>
+              <button onClick={() => setGuests(g => Math.min(20, g + 1))} style={{ width: 40, height: 40, borderRadius: 8, background: C.bg, color: C.mint, border: `1px solid ${C.mint}`, fontSize: 20, fontWeight: "bold", cursor: "pointer" }}>+</button>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
-            <button onClick={onCancel} style={T.btn}>Cancel</button>
-            <button onClick={() => onConfirm({ ...order, label: name.trim(), guest_count: guests })} style={{ ...T.btn, fontWeight: "bold" }}>Save</button>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+            <button onClick={onCancel} style={{ background: C.bg, color: C.mint, border: `1px solid ${C.mint}`, padding: "6px 14px", borderRadius: 8, fontFamily: FB, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+            <button onClick={() => onConfirm({ ...order, label: name.trim(), guest_count: guests })} style={{ background: C.mint, color: C.bg, border: "none", padding: "6px 14px", borderRadius: 8, fontFamily: FB, fontSize: 14, fontWeight: "bold", cursor: "pointer" }}>Save</button>
           </div>
         </div>
       </div>
@@ -193,10 +205,8 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
       setShowNew(false);
       onOpenOrder(newOrder);
       setOffline(false);
-    } catch (e) {
+    } catch {
       setOffline(true);
-      // Fallback local create if needed? Spec says "start empty if offline" on login.
-      // But for a new check, we probably need the ID from the backend.
     }
   };
 
@@ -211,7 +221,7 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
       setEditTarget(null);
       setSelected([]);
       setOffline(false);
-    } catch (e) {
+    } catch {
       setOffline(true);
     }
   };
@@ -222,118 +232,114 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
     return sum + (isNaN(val) ? 0 : val);
   }, 0);
 
+  const mine = orders.filter(o => (o.server_name || o.server) === staff.name);
+  const theirs = orders.filter(o => (o.server_name || o.server) !== staff.name);
+
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "grid", gridTemplateColumns: "278px 1fr 278px", gap: 15, padding: "15px 15px", overflow: "hidden" }}>
       {/* LEFT COLUMN */}
-      <div style={{ width: 170, borderRight: `1px solid ${C.dg}`, padding: 6, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {staff.role === "manager" ? <>
-          <SideCard label="Menu Configuration" expanded={leftA} onToggle={() => setLeftA(v => !v)} onNav={() => setScreen("menu-config")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>Items, modifiers, pricing</div>
-          </SideCard>
-          <SideCard label="Labor Reporting" expanded={leftB} onToggle={() => setLeftB(v => !v)} onNav={() => setScreen("labor-reporting")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>Clock-in/out, hours, cost %</div>
-          </SideCard>
+          <Card title="MENU CONFIG" expanded={leftA} onToggle={() => setLeftA(v => !v)} onNav={() => setScreen("menu-config")}>
+            <div style={{ opacity: 0.6 }}>Items, modifiers, pricing</div>
+          </Card>
+          <Card title="LABOR" expanded={leftB} onToggle={() => setLeftB(v => !v)} onNav={() => setScreen("labor-reporting")}>
+            <div style={{ opacity: 0.6 }}>Clock-in/out, hours, cost %</div>
+          </Card>
         </> : <>
-          <SideCard label="Shift Overview" expanded={leftA} onToggle={() => setLeftA(v => !v)}>
-            {[["Opened", "08:15 AM"], ["Orders", String(orders.filter(o => (o.server_name || o.server) === staff.name).length)], ["Gross", `$${gross.toFixed(2)}`]].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
-                <span style={{ color: C.dg }}>{k}</span><span style={{ fontWeight: "bold" }}>{v}</span>
+          <Card title="SHIFT OVERVIEW" expanded={leftA} onToggle={() => setLeftA(v => !v)}>
+            {[["Opened", "08:15 AM"], ["Orders", String(mine.length)], ["Gross", `$${gross.toFixed(2)}`]].map(([k, v]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ opacity: 0.6 }}>{k}</span><span style={{ fontWeight: "bold", color: k === "Gross" ? C.yellow : C.mint }}>{v}</span>
               </div>
             ))}
-          </SideCard>
-          <SideCard label="Messenger" expanded={leftB} onToggle={() => setLeftB(v => !v)} onNav={() => setScreen("messenger")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>No messages</div>
-          </SideCard>
+          </Card>
+          <Card title="MESSENGER" expanded={leftB} onToggle={() => setLeftB(v => !v)} onNav={() => setScreen("messenger")}>
+            <div style={{ opacity: 0.6 }}>No messages</div>
+          </Card>
         </>}
       </div>
 
       {/* CENTER COLUMN */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ flex: 1, padding: 10, overflowY: "auto" }}>
-          {(() => {
-            const mine = orders.filter(o => (o.server_name || o.server) === staff.name);
-            const theirs = orders.filter(o => (o.server_name || o.server) !== staff.name);
-            const renderBtn = o => (
-              <CheckBtn key={o.order_id || o.id} order={o} selected={selected.includes(o.order_id || o.id)} onToggle={() => toggleCheck(o.order_id || o.id)} />
-            );
-            return <>
-              <div style={{ fontSize: 9, color: C.dg, marginBottom: 6, letterSpacing: 1, textTransform: "uppercase" }}>
-                My Checks — {mine.length}
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: theirs.length ? 14 : 0 }}>
-                {mine.map(renderBtn)}
-                <div onClick={() => setShowNew(true)} style={{
-                  width: 68, height: 68, border: "2px dashed", borderColor: C.dg,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", color: C.dg, fontSize: 22, fontWeight: "bold",
-                  background: "transparent", userSelect: "none",
-                }}>＋</div>
-              </div>
-              {theirs.length > 0 && <>
-                <div style={{ fontSize: 9, color: C.dg, marginBottom: 6, letterSpacing: 1, textTransform: "uppercase", borderTop: `1px solid ${C.dg}`, paddingTop: 10 }}>
-                  Floor — {theirs.length}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, opacity: 0.6 }}>
-                  {theirs.map(renderBtn)}
-                </div>
-              </>}
-            </>;
-          })()}
+      <div style={{ border: `2px solid ${C.mint}`, borderRadius: 8, display: "flex", flexDirection: "column", background: C.bg, position: "relative", overflow: "hidden" }}>
+        <div style={{
+          background: C.mint, color: C.bg, fontFamily: FH, fontSize: 14,
+          padding: "0 10px", minHeight: 27, display: "flex", alignItems: "center",
+          justifyContent: "space-between", borderTopLeftRadius: 6, borderTopRightRadius: 6,
+        }}>
+          <span>CHECK OVERVIEW</span>
+          <span style={{ fontFamily: FB, fontSize: 12 }}>{mine.length} open</span>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: 15, display: "flex", flexDirection: "column" }}>
+          {/* My Checks grid */}
+          <div style={{ fontFamily: FH, fontSize: 11, color: C.mint, marginBottom: 8, letterSpacing: 1 }}>
+            MY CHECKS — {mine.length}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: theirs.length ? 16 : 0 }}>
+            {mine.map(o => (
+              <TableTile key={o.order_id || o.id} order={o} selected={selected.includes(o.order_id || o.id)} onToggle={() => toggleCheck(o.order_id || o.id)} />
+            ))}
+            <div onClick={() => setShowNew(true)} style={{
+              width: 78, height: 77, border: `2px dashed ${C.mint}`, borderRadius: 8,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: C.mint, fontSize: 28, opacity: 0.5, userSelect: "none",
+            }}>+</div>
+          </div>
+
+          {theirs.length > 0 && <>
+            <div style={{ fontFamily: FH, fontSize: 11, color: C.mint, marginBottom: 8, letterSpacing: 1, borderTop: `1px solid ${C.mint}33`, paddingTop: 12 }}>
+              FLOOR — {theirs.length}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, opacity: 0.5 }}>
+              {theirs.map(o => (
+                <TableTile key={o.order_id || o.id} order={o} selected={selected.includes(o.order_id || o.id)} onToggle={() => toggleCheck(o.order_id || o.id)} />
+              ))}
+            </div>
+          </>}
         </div>
 
         {selectedOrders.length > 0 && (
-          <CheckPanel orders={selectedOrders} onClose={() => setSelected([])} onOpenOrder={onOpenOrder} onEdit={o => setEditTarget(o)} />
+          <EditBar orders={selectedOrders} onClose={() => setSelected([])} onOpenOrder={onOpenOrder} onEdit={o => setEditTarget(o)} />
         )}
       </div>
 
       {/* RIGHT COLUMN */}
-      <div style={{ width: 170, borderLeft: `1px solid ${C.dg}`, padding: 6, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {staff.role === "manager" ? <>
-          <SideCard label="Sales Reporting" expanded={rightA} onToggle={() => setRightA(v => !v)} onNav={() => setScreen("sales-reporting")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>Daily, weekly, period reports</div>
-          </SideCard>
-          <SideCard label="Hardware & Settings" expanded={rightB} onToggle={() => setRightB(v => !v)} onNav={() => setScreen("hardware")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>Printer, terminal, network</div>
-          </SideCard>
+          <Card title="REPORTING" expanded={rightA} onToggle={() => setRightA(v => !v)} onNav={() => setScreen("sales-reporting")}>
+            <div style={{ opacity: 0.6 }}>Daily, weekly, period reports</div>
+          </Card>
+          <Card title="HARDWARE" expanded={rightB} onToggle={() => setRightB(v => !v)} onNav={() => setScreen("hardware")}>
+            <div style={{ opacity: 0.6 }}>Printer, terminal, network</div>
+          </Card>
         </> : <>
-          <SideCard label="Reporting" expanded={rightA} onToggle={() => setRightA(v => !v)} onNav={() => setScreen("sales-reporting")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>Your shift summary</div>
-          </SideCard>
-          <SideCard label="Hardware & Settings" expanded={rightB} onToggle={() => setRightB(v => !v)} onNav={() => setScreen("hardware")}>
-            <div style={{ fontSize: 10, color: C.dg, fontStyle: "italic" }}>Printer, display</div>
-          </SideCard>
+          <Card title="REPORTING" expanded={rightA} onToggle={() => setRightA(v => !v)} onNav={() => setScreen("sales-reporting")}>
+            <div style={{ opacity: 0.6 }}>Your shift summary</div>
+          </Card>
+          <Card title="HARDWARE" expanded={rightB} onToggle={() => setRightB(v => !v)} onNav={() => setScreen("hardware")}>
+            <div style={{ opacity: 0.6 }}>Printer, display</div>
+          </Card>
         </>}
 
         {/* 86 LIST */}
-        <div style={{ border: "2px solid", borderColor: C.mint, marginBottom: 6, background: C.gray }}>
-          <div
-            onClick={() => setRightC(v => !v)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "4px 8px", cursor: "pointer", userSelect: "none",
-              background: "#1a1a1a",
-              borderBottom: rightC ? `1px solid ${C.mint}` : "none",
-            }}
-          >
-            <span style={{ fontWeight: "bold", fontSize: 11, color: C.mint, fontFamily: "'Sevastopol Interface', monospace", flex: 1 }}>
-              86 List
-            </span>
-            <span style={{
-              width: 16, height: 16, border: `1px solid ${C.mint}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 14, lineHeight: 1, fontWeight: "bold",
-              background: "#1a1a1a", color: C.mint, userSelect: "none",
-            }}>{rightC ? "−" : "+"}</span>
+        <div style={{ border: `2px solid ${C.mint}`, borderRadius: 8, overflow: "hidden", marginBottom: 8 }}>
+          <div onClick={() => setRightC(v => !v)} style={{
+            background: "#1a1a1a", color: C.mint, padding: "0 10px", minHeight: 27,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer", userSelect: "none", fontFamily: FH, fontSize: 14,
+            borderBottom: rightC ? `1px solid ${C.mint}` : "none",
+          }}>
+            <span>86 LIST</span>
+            <span style={{ fontSize: 16, fontWeight: "bold" }}>{rightC ? "−" : "+"}</span>
           </div>
           {rightC && (
-            <div style={{ padding: "8px" }}>
+            <div style={{ padding: 8, background: "#1a1a1a" }}>
               {eightySixed.length === 0 ? (
-                <div style={{ fontSize: 10, color: C.mint, opacity: 0.45, fontStyle: "italic" }}>
-                  ALL ITEMS AVAILABLE
-                </div>
+                <div style={{ fontSize: 11, color: C.mint, opacity: 0.4, fontStyle: "italic", fontFamily: FB }}>ALL ITEMS AVAILABLE</div>
               ) : (
                 eightySixed.map(item => (
-                  <div key={item.item_id || item.name} style={{ fontSize: 10, color: C.softred, fontWeight: "bold", marginBottom: 2 }}>
+                  <div key={item.item_id || item.name} style={{ fontSize: 11, color: C.red, fontWeight: "bold", fontFamily: FB, marginBottom: 2 }}>
                     {item.name}
                   </div>
                 ))
@@ -342,11 +348,11 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
           )}
         </div>
 
-        <div style={{ marginTop: "auto", paddingTop: 8 }}>
+        <div style={{ marginTop: "auto" }}>
           <button onClick={() => setScreen("close-day")} style={{
-            ...T.btn, width: "100%", minWidth: 0, padding: "5px 8px",
-            fontSize: 10, textAlign: "center", color: C.black, cursor: "pointer",
-            borderColor: RAISED,
+            width: "100%", padding: "8px", background: C.bg, color: C.mint,
+            border: `1px solid ${C.mint}`, borderRadius: 8, fontFamily: FB,
+            fontSize: 13, cursor: "pointer",
           }}>Close Day</button>
         </div>
       </div>
