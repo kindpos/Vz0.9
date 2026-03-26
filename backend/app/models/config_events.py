@@ -48,6 +48,7 @@ class StoreConfigBundle(BaseModel):
     operating_hours: Dict[str, OperatingHours]
     order_types: StoreOrderTypes
     auto_gratuity: StoreAutoGratuity
+    cash_discount_rate: float = 0.0
 
 # Employee Models
 class Role(BaseModel):

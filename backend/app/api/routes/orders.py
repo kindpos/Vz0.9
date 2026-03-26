@@ -28,8 +28,11 @@ from app.core.events import (
     order_closed,
     order_voided,
     ticket_printed,
+    create_event,
+    EventType,
 )
 from app.core.projections import project_order, project_orders, Order
+from app.core.event_ledger import get_open_orders
 from app.api.dependencies import get_printer_manager
 from app.core.adapters.printer_manager import PrinterManager
 from app.core.adapters.base_printer import (
@@ -682,3 +685,35 @@ async def send_order(
             logger.exception(f"Printer failed for order {order_id} — send events already recorded")
 
     return SendResponse(sent_count=len(sent_items), items=sent_items)
+
+
+# =============================================================================
+# CLOSE BATCH
+# =============================================================================
+
+@router.post("/close-batch")
+async def close_batch(ledger: EventLedger = Depends(get_ledger)):
+    """Close all open orders and record a batch.closed event."""
+    open_ids = await get_open_orders(ledger)
+    closed_count = 0
+
+    for oid in open_ids:
+        events = await ledger.get_events_by_correlation(oid)
+        order = project_order(events)
+        if order and order.status == "open":
+            evt = order_closed(
+                terminal_id=settings.terminal_id,
+                order_id=oid,
+                total=order.total,
+            )
+            await ledger.append(evt)
+            closed_count += 1
+
+    batch_evt = create_event(
+        event_type=EventType.BATCH_CLOSED,
+        terminal_id=settings.terminal_id,
+        payload={"order_count": closed_count},
+    )
+    await ledger.append(batch_evt)
+
+    return {"order_count": closed_count}

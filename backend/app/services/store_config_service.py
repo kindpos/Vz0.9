@@ -59,7 +59,8 @@ class StoreConfigService:
             },
             "operating_hours": {},
             "order_types": { "enabled_types": [] },
-            "auto_gratuity": { "enabled": False, "party_size_threshold": 6, "rate_percent": 20.0, "applies_to_order_types": ["dine_in"] }
+            "auto_gratuity": { "enabled": False, "party_size_threshold": 6, "rate_percent": 20.0, "applies_to_order_types": ["dine_in"] },
+            "cash_discount_rate": 0.0
         }
 
         for event in events:
