@@ -51,9 +51,9 @@ function CheckBtn({ order, selected, onToggle }) {
       outline: selected ? `2px solid ${C.navy}` : "none",
       outlineOffset: -2,
     }}>
-      <span style={{ fontSize: 10, fontWeight: "bold", color: C.black }}>{order.label || order.id.replace("ORD-", "#")}</span>
+      <span style={{ fontSize: 10, fontWeight: "bold", color: C.black }}>{order.table || order.label || (order.order_id || order.id || '').replace("ORD-", "#")}</span>
       <span style={{ fontSize: 9, color: C.dg }}>{order.guest_count}g</span>
-      <span style={{ fontSize: 9, fontWeight: "bold" }}>{order.total}</span>
+      <span style={{ fontSize: 9, fontWeight: "bold" }}>{typeof order.total === 'number' ? "$" + order.total.toFixed(2) : order.total}</span>
     </div>
   );
 }
@@ -67,14 +67,14 @@ function CheckPanel({ orders, onClose, onOpenOrder, onEdit }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
         <span style={{ fontWeight: "bold", fontSize: 11 }}>
-          {multi ? `${orders.length} Checks Selected` : `Check ${orders[0].id}`}
+          {multi ? `${orders.length} Checks Selected` : `Check ${orders[0].order_id || orders[0].id}`}
         </span>
         <span style={{ flex: 1 }} />
         <button onClick={onClose} style={{ ...T.btn, minWidth: 0, padding: "1px 6px", fontSize: 10, background: "#c00020", color: "#fff", borderColor: "#ff6060 #800010 #800010 #ff6060", fontWeight: "bold" }}>✕</button>
       </div>
       {!multi && (
         <div style={{ fontSize: 10, color: C.dg, marginBottom: 6 }}>
-          {orders[0].server}  ·  {orders[0].guest_count} guest{orders[0].guest_count > 1 ? "s" : ""}  ·  {orders[0].elapsed}  ·  {orders[0].total}
+          {orders[0].server_name || orders[0].server}  ·  {orders[0].guest_count} guest{orders[0].guest_count > 1 ? "s" : ""}  ·  {orders[0].elapsed || "--"}  ·  {typeof orders[0].total === 'number' ? "$" + orders[0].total.toFixed(2) : orders[0].total}
         </div>
       )}
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -216,7 +216,7 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
     }
   };
 
-  const selectedOrders = orders.filter(o => selected.includes(o.id));
+  const selectedOrders = orders.filter(o => selected.includes(o.order_id || o.id));
   const gross = orders.reduce((sum, o) => {
     const val = typeof o.total === 'string' ? parseFloat(o.total.replace("$", "")) : o.total;
     return sum + (isNaN(val) ? 0 : val);
@@ -235,7 +235,7 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
           </SideCard>
         </> : <>
           <SideCard label="Shift Overview" expanded={leftA} onToggle={() => setLeftA(v => !v)}>
-            {[["Opened", "08:15 AM"], ["Orders", String(orders.filter(o => o.server === staff.name).length)], ["Gross", `$${gross.toFixed(2)}`]].map(([k, v]) => (
+            {[["Opened", "08:15 AM"], ["Orders", String(orders.filter(o => (o.server_name || o.server) === staff.name).length)], ["Gross", `$${gross.toFixed(2)}`]].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
                 <span style={{ color: C.dg }}>{k}</span><span style={{ fontWeight: "bold" }}>{v}</span>
               </div>
@@ -251,10 +251,10 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ flex: 1, padding: 10, overflowY: "auto" }}>
           {(() => {
-            const mine = orders.filter(o => o.server === staff.name);
-            const theirs = orders.filter(o => o.server !== staff.name);
+            const mine = orders.filter(o => (o.server_name || o.server) === staff.name);
+            const theirs = orders.filter(o => (o.server_name || o.server) !== staff.name);
             const renderBtn = o => (
-              <CheckBtn key={o.id} order={o} selected={selected.includes(o.id)} onToggle={() => toggleCheck(o.id)} />
+              <CheckBtn key={o.order_id || o.id} order={o} selected={selected.includes(o.order_id || o.id)} onToggle={() => toggleCheck(o.order_id || o.id)} />
             );
             return <>
               <div style={{ fontSize: 9, color: C.dg, marginBottom: 6, letterSpacing: 1, textTransform: "uppercase" }}>

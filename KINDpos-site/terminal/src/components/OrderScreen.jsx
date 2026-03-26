@@ -89,7 +89,6 @@ export default function OrderScreen({ staff, order: initialOrder, onPayment, onR
   }, [setOffline]);
 
   const items = order.items || [];
-  const menuCategories = menu ? Object.keys(menu) : [];
   const subtotal = items.reduce((s, i) => s + (i.price * (i.quantity || 1)), 0);
   const taxRate = 0.07; // Configurable in Overseer, but 7% for v0.9
   const tax = subtotal * taxRate;

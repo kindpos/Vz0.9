@@ -20,7 +20,8 @@ export default function PaymentScreen({ staff, payload, onComplete, setOffline }
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
 
-  const { items, subtotal, tax, cardTotal, cashTotal, order } = payload;
+  const { items, subtotal, tax, cardTotal, cashTotal } = payload;
+  const order = payload;
   const currentTotal = tab === "Cash" ? cashTotal : cardTotal;
   const tipAmount = parseFloat(tip || 0);
   const grandTotal = currentTotal + tipAmount;
@@ -40,7 +41,7 @@ export default function PaymentScreen({ staff, payload, onComplete, setOffline }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          order_id: order.id,
+          order_id: order.order_id || order.id,
           amount: amountToCharge,
           tip: tipAmount,
           payment_method: isCash ? "cash" : "card",
@@ -55,7 +56,7 @@ export default function PaymentScreen({ staff, payload, onComplete, setOffline }
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "ORDER_CLOSED",
-            order_id: order.id,
+            order_id: order.order_id || order.id,
             payment_method: isCash ? "cash" : "card",
             amount: amountToCharge,
             tip: tipAmount
@@ -79,7 +80,7 @@ export default function PaymentScreen({ staff, payload, onComplete, setOffline }
   return (
     <>
       <div style={{ background: "#d4d0c8", borderBottom: `1px solid ${C.dg}`, padding: "3px 8px", display: "flex", gap: 12, fontSize: 10, alignItems: "center" }}>
-        <span style={{ fontWeight: "bold" }}>Payment — {order.id}</span>
+        <span style={{ fontWeight: "bold" }}>Payment — {order.order_id || order.id}</span>
         <span style={{ color: C.dg }}>·</span>
         <span>{staff.name}</span>
         <span style={{ flex: 1 }} />
@@ -93,9 +94,9 @@ export default function PaymentScreen({ staff, payload, onComplete, setOffline }
           <div style={{ flex: 1, overflowY: "auto", padding: 4, fontFamily: "monospace", fontSize: 10 }}>
             {items.map((item, i) => (
               <div key={i} style={{ display: "flex", gap: 4, marginBottom: 2 }}>
-                <span style={{ minWidth: 18, color: C.dg }}>{item.qty}×</span>
+                <span style={{ minWidth: 18, color: C.dg }}>{item.quantity}×</span>
                 <span style={{ flex: 1 }}>{item.name}</span>
-                <span>${(item.price * item.qty).toFixed(2)}</span>
+                <span>${(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>

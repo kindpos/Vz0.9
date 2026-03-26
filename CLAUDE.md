@@ -18,7 +18,11 @@ Read `OPUS_NOTES_v3.md` for Phase 1 handoff context. Read `kindpos-junie-integra
 
 ```bash
 cd backend
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# PYTHONPATH must include the project root so `shared` is resolvable
+# PowerShell:
+$env:PYTHONPATH="C:\Users\bgkd2\PycharmProjects\KINDpos_vz0.9"; python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# bash/WSL:
+PYTHONPATH=/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 # Run tests (standard dev CI command)
 pytest --ignore=tests/test_payment_manager.py -k "not health_check"

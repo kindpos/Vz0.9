@@ -59,7 +59,7 @@ export default function App() {
       fetch(`${API_BASE}/api/v1/config/store`).then(r => r.json()).catch(() => null),
     ])
       .then(([ordersData, menuData, configData]) => {
-        setOrders(ordersData.orders);
+        setOrders(Array.isArray(ordersData) ? ordersData : (ordersData.orders ?? []));
         setMenu(menuData.items_by_category);
         setStoreConfig(configData);
         setOffline(false);
