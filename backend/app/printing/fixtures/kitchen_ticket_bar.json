@@ -1,0 +1,26 @@
+{
+  "order_id": "order_321",
+  "ticket_number": "C-004",
+  "order_type": "bar_tab",
+  "table": null,
+  "seat": null,
+  "fired_at": "2026-03-20T17:50:00Z",
+  "station_name": "Bar",
+  "items": [
+    {
+      "name": "Local IPA",
+      "modifiers": [],
+      "seat_number": null,
+      "special_instructions": null
+    },
+    {
+      "name": "Classic Margarita",
+      "modifiers": ["Salt Rim"],
+      "seat_number": null,
+      "special_instructions": "Make it strong"
+    }
+  ],
+  "order_type_display": "BAR TAB",
+  "is_reprint": false,
+  "original_fired_at": null
+}

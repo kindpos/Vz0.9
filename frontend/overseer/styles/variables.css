@@ -1,0 +1,90 @@
+:root {
+  /* Colors */
+  --bg-primary: #333333;
+  --bg-secondary: #222222;
+  --accent-mint: #C6FFBB;
+  --accent-yellow: #FBDE42;
+  --accent-red: #E84040;
+  --accent-orange: #FF8C00;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --border-mint: #C6FFBB;
+  --sidebar-bg: #1A1A1A;
+  --sidebar-active-bg: #222222;
+
+  /* Fonts */
+  --font-heading: 'Alien Encounters Solid Bold', sans-serif;
+  --font-body: 'Sevastopol Interface', monospace;
+
+  /* Font Sizes */
+  --font-size-body: 16px;
+  --font-size-label: 16px;
+  --font-size-input: 16px;
+  --font-size-tab: 18px;
+  --font-size-sidebar: 16px;
+  --font-size-heading: 22px;
+  --font-size-section: 14px;  /* group box labels */
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+}
+
+@font-face {
+  font-family: 'Alien Encounters Solid Bold';
+  src: url('../assets/fonts/Alien-Encounters-Solid-Bold.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sevastopol Interface';
+  src: url('../assets/fonts/Sevastopol-Interface.ttf') format('truetype');
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Common Classes */
+.heading {
+  font-family: var(--font-heading);
+}
+
+.mint-text { color: var(--accent-mint); }
+.yellow-text { color: var(--accent-yellow); }
+.red-text { color: var(--accent-red); }
+.orange-text { color: var(--accent-orange); }
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  color: inherit;
+}

@@ -1,0 +1,67 @@
+/* ============================================
+   KINDpos Overseer - Design Tokens
+   Nice. Dependable. Yours.
+   ============================================ */
+
+/* --- Font Faces --- */
+@font-face {
+    font-family: 'Alien Encounters';
+    src: url('../assets/fonts/Alien-Encounters-Solid-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Sevastopol Interface';
+    src: url('../assets/fonts/Sevastopol-Interface.ttf') format('truetype');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* --- Root Variables --- */
+:root {
+    /* Color Palette - Retro 80s */
+    --color-bg:           #333333;
+    --color-hex:          #C6FFBB;
+    --color-hex-hover:    #d4ffca;
+    --color-primary-text: #FBDE42;
+    --color-secondary-text: #333333;
+    --color-accent-red:   #FF3333;
+    --color-white:        #FFFFFF;
+
+    /* Typography */
+    --font-display: 'Alien Encounters', 'Impact', sans-serif;
+    --font-body:    'Sevastopol Interface', 'Arial', sans-serif;
+
+    /* Font Sizes */
+    --text-title:    75px;
+    --text-subtitle: 40px;
+    --text-body:     30px;
+    --text-badge:    50px;
+    --text-hex-label: 50px;
+    --text-hex-sub:   35px;
+
+    /* Hex Dimensions */
+    --hex-size:     240px;
+    --hex-rotation: 30deg;
+    --hex-gap:      1.08;
+
+    /* Layout */
+    --viewport-width:  1280px;
+    --viewport-height: 800px;
+    --header-height:   400px;
+
+    /* Transitions */
+    --transition-fast:   0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow:   0.5s ease-out;
+    --transition-slide:  0.4s ease-out;
+
+    /* Z-Index Layers */
+    --z-background:    0;
+    --z-hex-grid:      10;
+    --z-hex-hover:     20;
+    --z-detail-screen: 30;
+    --z-header:        40;
+    --z-overlay:       50;
+}

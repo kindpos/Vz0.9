@@ -1,0 +1,142 @@
+/* ============================================
+   KINDpos Overseer - Page Layout
+   Three zones: Header | Hex Container | Detail Screen
+   ============================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--color-bg);
+    font-family: var(--font-body);
+    color: var(--color-white);
+}
+
+/* --- App Container --- */
+#app {
+    width: 100%;
+    height: 100%;
+    max-width: var(--viewport-width);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+
+/* --- Header Zone --- */
+.header-logo {
+    height: 275px;    /* was 48px — adjust to taste */
+    width: auto;
+    margin-bottom: 4px;
+}
+#overseer-header {
+    height: var(--header-height);
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-header);
+    flex-shrink: 0;
+}
+
+.header-title {
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    color: var(--color-primary-text);
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.header-subtitle {
+    font-family: var(--font-body);
+    font-size: var(--text-subtitle);
+    color: var(--color-hex);
+    margin-bottom: 50px;
+}
+
+.header-badges {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.header-badge {
+    font-family: var(--font-body);
+    font-size: var(--text-badge);
+    color: var(--color-hex);
+    opacity: 0.7;
+}
+
+/* --- Hex Container Zone --- */
+#hex-container {
+    flex: 1;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-hex-grid);
+    position: relative;
+    margin-top: 20px;
+}
+
+/* --- Detail Screen Zone --- */
+#detail-screen-container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-bg);
+    z-index: var(--z-overlay);
+    transform: translateX(100%);
+    transition: transform var(--transition-slide);
+    overflow-y: auto;
+    padding-top: 20px;
+}
+
+#detail-screen-container.visible {
+    transform: translateX(0);
+}
+
+.detail-header {
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.detail-back-button {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--color-hex);
+    background: none;
+    border: 1px solid var(--color-hex);
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.detail-back-button:hover {
+    background-color: rgba(198, 255, 187, 0.1);
+}
+
+.detail-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    color: var(--color-primary-text);
+}
+
+.detail-content {
+    padding: 20px 30px;
+}

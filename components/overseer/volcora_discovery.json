@@ -1,0 +1,26 @@
+{
+  "scan_id": "scan_20260211_163233_84d1236e",
+  "scan_start": "2026-02-11T16:32:33.575903",
+  "scan_end": "2026-02-11T16:32:42.610038",
+  "duration_seconds": 9.034135,
+  "printers_found": 1,
+  "printers": [
+    {
+      "ip_address": "10.0.0.186",
+      "mac_address": "00:53:53:FA:54:3E",
+      "hostname": null,
+      "manufacturer": "Volcora",
+      "model": null,
+      "protocol": "escpos",
+      "open_ports": [
+        9100
+      ],
+      "response_time_ms": 1.0,
+      "online_status": true,
+      "discovery_method": "direct_probe",
+      "friendly_name": "Discovered Printer 1",
+      "device_subtype": "receipt",
+      "location_notes": "unlabeled"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "order_id": "ORD-102",
+  "ticket_number": "C-102",
+  "order_type": "to_go",
+  "fired_at": "2026-03-20T17:10:00Z",
+  "station_name": "Hot Line",
+  "items": [
+    {
+      "name": "Spicy Chicken Sandwich",
+      "modifiers": ["Extra Jalapenos", "No Mayo"],
+      "seat_number": null,
+      "special_instructions": "!! ALLERGY: NO PEANUTS !!"
+    },
+    {
+      "name": "Classic Burger",
+      "modifiers": ["Medium Rare"],
+      "seat_number": null,
+      "special_instructions": ""
+    }
+  ],
+  "order_type_display": "TO-GO ORDER",
+  "is_reprint": false,
+  "original_fired_at": null
+}

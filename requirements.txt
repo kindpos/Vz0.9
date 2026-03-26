@@ -1,0 +1,3 @@
+# KINDpos Vz0.9 — root requirements
+# Backend dependencies
+-r backend/requirements.txt

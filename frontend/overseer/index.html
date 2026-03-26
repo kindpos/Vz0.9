@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KINDpos Overseer</title>
+  <link rel="stylesheet" href="styles/variables.css">
+  <link rel="stylesheet" href="styles/overseer-shell.css">
+  <link rel="stylesheet" href="styles/win98.css">
+  <link rel="stylesheet" href="styles/sidebar.css">
+  <link rel="stylesheet" href="styles/workspace.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KINDpos Overseer">
+  <link rel="apple-touch-icon" href="assets/images/icon-192.png">
+  <link rel="icon" type="image/png" href="assets/images/icon-192.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swPath = window.location.pathname.endsWith('/') 
+          ? 'service-worker.js' 
+          : window.location.pathname.split('/').slice(0, -1).join('/') + '/service-worker.js';
+        
+        navigator.serviceWorker.register(swPath)
+          .then(reg => console.log('Service worker registered.', reg))
+          .catch(err => console.error('Service worker registration failed:', err));
+      });
+    }
+  </script>
+</head>
+<body>
+  <div id="overseer-root"></div>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

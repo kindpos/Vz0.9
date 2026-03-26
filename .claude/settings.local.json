@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_payment_manager.py tests/test_event_ledger.py -q)",
+      "Bash(python3 -m pytest tests/test_payment_manager.py tests/test_event_ledger.py -q)",
+      "Bash(ls .venv/Scripts/python*)",
+      "Bash(ls .venv/bin/python*)",
+      "Bash(where python:*)",
+      "Read(//c/Users/bgkd2/AppData/Local/Programs/Python/**)",
+      "Bash(/c/Users/bgkd2/AppData/Local/Programs/Python/Python312/python.exe -m pytest /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_payment_manager.py /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_event_ledger.py -v)",
+      "Bash(/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/.venv/Scripts/python.exe -m pytest /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_payment_manager.py /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_event_ledger.py -v)",
+      "Bash(/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/.venv/Scripts/python.exe -m pytest /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_event_ledger.py -v)",
+      "Bash(/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/.venv/Scripts/python.exe -m pytest /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/ --ignore=/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_payment_manager.py -v)",
+      "Bash(/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/.venv/Scripts/python.exe -m pytest /c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/ --ignore=/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/backend/tests/test_payment_manager.py -k \"not health_check\" -v)",
+      "Bash(grep -E \"\\\\.jsx$\")",
+      "Bash(python -m pytest --ignore=tests/test_payment_manager.py -k \"not health_check\")",
+      "Bash(python3 -m pytest --ignore=tests/test_payment_manager.py -k \"not health_check\")",
+      "Bash(py -m pytest --ignore=tests/test_payment_manager.py -k \"not health_check\")",
+      "Bash(/c/Users/bgkd2/PycharmProjects/KINDpos_vz0.9/.venv/Scripts/pytest --ignore=tests/test_payment_manager.py -k \"not health_check\")",
+      "Bash(/c/Users/bgkd2/AppData/Local/Programs/Python/Python312/python.exe -m pip install pytest pytest-asyncio -q)",
+      "Bash(/c/Users/bgkd2/AppData/Local/Programs/Python/Python312/python.exe -m pytest --ignore=tests/test_payment_manager.py -k \"not health_check\")",
+      "Bash(/c/Users/bgkd2/AppData/Local/Programs/Python/Python312/python.exe -m pip install -r requirements.txt -q)"
+    ]
+  }
+}

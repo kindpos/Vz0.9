@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1280, height=800, initial-scale=1.0">
+    <title>KINDpos Overseer</title>
+
+    <!-- Stylesheets (order matters: variables first) -->
+    <link rel="stylesheet" href="styles/variables.css">
+    <link rel="stylesheet" href="styles/overseer-layout.css">
+    <link rel="stylesheet" href="styles/overseer-hex.css">
+    <link rel="stylesheet" href="styles/overseer-details.css">
+    <link rel="stylesheet" href="styles/printer-setup.css">
+</head>
+<body>
+    <div id="app">
+
+        <!-- Header Zone -->
+        <header id="overseer-header">
+            <h1 class="header-title">KINDpos Overseer</h1>
+            <p class="header-subtitle">Restaurant Configuration &amp; Management</p>
+            <div class="header-badges">
+                <span class="header-badge">Employees: --</span>
+                <span class="header-badge">Menu Items: --</span>
+                <span class="header-badge">Terminals: --</span>
+                <span class="header-badge">Last Sync: --</span>
+            </div>
+        </header>
+
+        <!-- Hex Container Zone (scene manager mounts hex grid here) -->
+        <main id="hex-container">
+            <!-- Hex navigation renders here via scene manager -->
+        </main>
+
+        <!-- Detail Screen Zone (slides in from right) -->
+        <div id="detail-screen-container">
+            <div class="detail-header">
+                <button class="detail-back-button">&larr; Back</button>
+                <h2 class="detail-title"></h2>
+            </div>
+            <div class="detail-content">
+                <!-- Detail scene content mounts here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Chart.js (offline-first: local copy) -->
+    <script src="assets/js/chart.min.js"></script>
+    <script src="assets/js/xlsx.mini.min.js"></script>
+
+    <!-- Boot (ES Module) -->
+    <script type="module" src="src/app.js"></script>
+</body>
+</html>

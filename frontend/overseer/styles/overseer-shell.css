@@ -1,0 +1,66 @@
+.overseer-shell {
+  display: grid;
+  grid-template-areas: "sidebar workspace";
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 1fr;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: grid-template-columns var(--transition-fast);
+}
+
+@media (max-width: 1199px) {
+  .overseer-shell {
+    grid-template-columns: 56px 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .overseer-shell {
+    display: none;
+  }
+  .mobile-warning {
+    display: flex;
+    height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+    background: var(--bg-primary);
+    color: var(--accent-mint);
+    font-size: var(--font-size-header);
+    font-family: var(--font-heading);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-warning {
+    display: none;
+  }
+}
+
+#sidebar-mount {
+  grid-area: sidebar;
+  background: var(--sidebar-bg);
+  border-right: 1px solid #444;
+  z-index: 10;
+}
+
+#workspace-mount {
+  grid-area: workspace;
+  overflow-y: auto;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+/* Training Mode Overrides */
+body.training-mode {
+  --bg-primary: #C6FFBB;
+  --bg-secondary: #B0E6A7;
+  --accent-mint: #333333;
+  --text-primary: #333333;
+  --text-secondary: #555555;
+  --sidebar-bg: #9AD48F;
+}

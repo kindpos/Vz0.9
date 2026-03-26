@@ -1,0 +1,44 @@
+.workspace-content {
+  padding: 24px;
+  height: 100%;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 30px;
+  padding: 0 24px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 20px;
+  background: var(--bg-secondary);
+}
+
+.tab-item {
+  padding: 15px 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition-fast);
+  position: relative;
+  text-transform: uppercase;
+}
+
+.tab-item:hover {
+  color: var(--text-primary);
+}
+
+.tab-item.active {
+  color: var(--accent-mint);
+  border-bottom-color: var(--accent-mint);
+}
+
+.tab-item .pending-dot {
+  position: absolute;
+  top: 10px;
+  right: -8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-orange);
+}

@@ -1,0 +1,152 @@
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 0;
+  user-select: none;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+}
+
+.sidebar-header img {
+    height: 32px;
+    width: auto;
+}
+
+.sidebar-header .overseer-text {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  color: var(--accent-mint);
+  letter-spacing: 2px;
+}
+
+.nav-items {
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  border-left: 4px solid transparent;
+  gap: 12px;
+}
+
+.nav-item:hover {
+  background: var(--sidebar-active-bg);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  color: var(--accent-mint);
+  border-left-color: var(--accent-mint);
+  background: var(--sidebar-active-bg);
+}
+
+.nav-item.pending {
+  color: var(--accent-orange);
+}
+
+.nav-item .icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-item .label {
+  font-size: var(--font-size-sidebar);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity var(--transition-fast);
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: #444;
+  margin: 10px 0;
+}
+
+.sidebar-footer {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 4px;
+  transition: background var(--transition-fast);
+  position: relative;
+  color: var(--text-secondary);
+}
+
+.footer-btn:hover {
+  background: var(--sidebar-active-bg);
+}
+
+.footer-btn.active {
+  color: var(--accent-mint);
+}
+
+.footer-btn .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+  flex-shrink: 0;
+}
+
+.footer-btn.green .dot { background: var(--accent-mint); }
+.footer-btn.yellow .dot { background: var(--accent-yellow); }
+.footer-btn.red .dot { background: var(--accent-red); }
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--accent-orange);
+  color: var(--bg-primary);
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.push-btn.orange {
+  color: var(--accent-orange);
+}
+
+.push-btn.disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 1199px) {
+  .overseer-text, 
+  .nav-item .label,
+  .footer-btn .label {
+    display: none;
+  }
+  .sidebar-header {
+    padding: 12px 0;
+    justify-content: center;
+  }
+  .sidebar-header img {
+    height: 32px;
+  }
+}
