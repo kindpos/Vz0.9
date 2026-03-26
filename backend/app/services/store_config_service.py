@@ -2,8 +2,8 @@ from typing import List, Dict, Any
 from app.core.event_ledger import EventLedger
 from app.core.events import EventType, Event
 from app.models.config_events import (
-    StoreConfigBundle, StoreInfo, TaxRule, CCProcessingRate, 
-    OperatingHours, StoreOrderTypes, StoreAutoGratuity
+    StoreConfigBundle, StoreInfo, TaxRule, CCProcessingRate,
+    OperatingHours, StoreOrderTypes, StoreAutoGratuity, CashDiscount
 )
 
 class StoreConfigService:
@@ -24,7 +24,8 @@ class StoreConfigService:
             EventType.STORE_TAX_RULE_DELETED,
             EventType.STORE_OPERATING_HOURS_UPDATED,
             EventType.STORE_ORDER_TYPES_UPDATED,
-            EventType.STORE_AUTO_GRATUITY_UPDATED
+            EventType.STORE_AUTO_GRATUITY_UPDATED,
+            EventType.STORE_CASH_DISCOUNT_UPDATED
         ]
         
         # This is a bit inefficient to call for each type, but it works with existing ledger API
@@ -59,7 +60,8 @@ class StoreConfigService:
             },
             "operating_hours": {},
             "order_types": { "enabled_types": [] },
-            "auto_gratuity": { "enabled": False, "party_size_threshold": 6, "rate_percent": 20.0, "applies_to_order_types": ["dine_in"] }
+            "auto_gratuity": { "enabled": False, "party_size_threshold": 6, "rate_percent": 20.0, "applies_to_order_types": ["dine_in"] },
+            "cash_discount": { "enabled": False, "rate_percent": 3.5 }
         }
 
         for event in events:
@@ -85,6 +87,8 @@ class StoreConfigService:
                 config["order_types"] = payload
             elif etype == EventType.STORE_AUTO_GRATUITY_UPDATED:
                 config["auto_gratuity"] = payload
+            elif etype == EventType.STORE_CASH_DISCOUNT_UPDATED:
+                config["cash_discount"] = payload
 
         # Format tax_rules as list
         config["tax_rules"] = list(config["tax_rules"].values())

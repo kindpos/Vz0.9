@@ -142,6 +142,7 @@ class EventType(str, Enum):
     STORE_OPERATING_HOURS_UPDATED = "store.operating_hours_updated"
     STORE_ORDER_TYPES_UPDATED = "store.order_types_updated"
     STORE_AUTO_GRATUITY_UPDATED = "store.auto_gratuity_updated"
+    STORE_CASH_DISCOUNT_UPDATED = "store.cash_discount_updated"
 
     # Employee & Roles (NEW)
     EMPLOYEE_ROLE_CREATED = "employee.role_created"

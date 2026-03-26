@@ -17,6 +17,10 @@ class CCProcessingRate(BaseModel):
     rate_percent: float = 2.9
     per_transaction_fee: float = 0.30
 
+class CashDiscount(BaseModel):
+    enabled: bool = False
+    rate_percent: float = 3.5
+
 class TaxRule(BaseModel):
     tax_rule_id: str
     name: str
@@ -48,6 +52,7 @@ class StoreConfigBundle(BaseModel):
     operating_hours: Dict[str, OperatingHours]
     order_types: StoreOrderTypes
     auto_gratuity: StoreAutoGratuity
+    cash_discount: CashDiscount
 
 # Employee Models
 class Role(BaseModel):
