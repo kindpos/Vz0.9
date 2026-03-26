@@ -20,6 +20,8 @@ from app.core.events import (
     item_removed,
     item_modified,
     modifier_applied,
+    item_transferred,
+    item_sent,
     payment_initiated,
     payment_confirmed,
     payment_failed,
@@ -95,6 +97,18 @@ class VoidOrderRequest(BaseModel):
     approved_by: Optional[str] = None
 
 
+class TransferItemRequest(BaseModel):
+    """Request to transfer an item between seats."""
+    item_id: str
+    from_seat: Optional[int] = None
+    to_seat: int
+
+
+class SendItemsRequest(BaseModel):
+    """Request to send items to kitchen."""
+    item_ids: Optional[list[str]] = None
+
+
 class OrderItemResponse(BaseModel):
     """Response model for an order item."""
     item_id: str
@@ -106,6 +120,8 @@ class OrderItemResponse(BaseModel):
     notes: Optional[str]
     modifiers: list[dict]
     subtotal: float
+    seat_number: Optional[int] = None
+    sent: bool = False
 
 
 class OrderResponse(BaseModel):
@@ -148,6 +164,8 @@ class OrderResponse(BaseModel):
                     notes=item.notes,
                     modifiers=item.modifiers,
                     subtotal=item.subtotal,
+                    seat_number=item.seat_number,
+                    sent=item.sent,
                 )
                 for item in order.items
             ],
@@ -546,6 +564,105 @@ async def void_order(
         order_id=order_id,
         reason=request.reason,
         approved_by=request.approved_by,
+    )
+    await ledger.append(event)
+
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
+@router.post("/{order_id}/transfer-item", response_model=OrderResponse)
+async def transfer_item(
+        order_id: str,
+        request: TransferItemRequest,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Transfer an item from one seat to another."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status != "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot transfer items on a non-open order"
+        )
+
+    # Find the item
+    target_item = None
+    for item in order.items:
+        if item.item_id == request.item_id:
+            target_item = item
+            break
+
+    if not target_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Item {request.item_id} not found on order"
+        )
+
+    # Validate from_seat matches current seat
+    if request.from_seat is not None and target_item.seat_number != request.from_seat:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Item is on seat {target_item.seat_number}, not seat {request.from_seat}"
+        )
+
+    event = item_transferred(
+        terminal_id=settings.terminal_id,
+        order_id=order_id,
+        item_id=request.item_id,
+        name=target_item.name,
+        from_seat=target_item.seat_number,
+        to_seat=request.to_seat,
+    )
+    await ledger.append(event)
+
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
+@router.post("/{order_id}/send", response_model=OrderResponse)
+async def send_items(
+        order_id: str,
+        request: SendItemsRequest = SendItemsRequest(),
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Send items to kitchen. If item_ids is empty/omitted, sends all unsent items."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status != "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot send items on a non-open order"
+        )
+
+    # Determine which items to send
+    if request.item_ids:
+        # Validate requested items exist and are unsent
+        order_item_ids = {item.item_id for item in order.items}
+        for iid in request.item_ids:
+            if iid not in order_item_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Item {iid} not found on order"
+                )
+        ids_to_send = [
+            item.item_id for item in order.items
+            if item.item_id in set(request.item_ids) and not item.sent
+        ]
+    else:
+        # Default: send all unsent items
+        ids_to_send = [item.item_id for item in order.items if not item.sent]
+
+    if not ids_to_send:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No unsent items to send"
+        )
+
+    event = item_sent(
+        terminal_id=settings.terminal_id,
+        order_id=order_id,
+        item_ids=ids_to_send,
     )
     await ledger.append(event)
 

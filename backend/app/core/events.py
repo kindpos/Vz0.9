@@ -38,6 +38,7 @@ class EventType(str, Enum):
     ITEM_REMOVED = "ITEM_REMOVED"
     ITEM_MODIFIED = "ITEM_MODIFIED"
     ITEM_SENT = "ITEM_SENT"
+    ITEM_TRANSFERRED = "ITEM_TRANSFERRED"
     MODIFIER_APPLIED = "MODIFIER_APPLIED"
 
     # Discounts
@@ -394,6 +395,52 @@ def modifier_applied(
             "modifier_name": modifier_name,
             "modifier_price": modifier_price,
             "action": action,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
+def item_transferred(
+        terminal_id: str,
+        order_id: str,
+        item_id: str,
+        name: str,
+        from_seat: Optional[int],
+        to_seat: int,
+        **kwargs
+) -> Event:
+    """Create an ITEM_TRANSFERRED event."""
+    return create_event(
+        event_type=EventType.ITEM_TRANSFERRED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "item_id": item_id,
+            "name": name,
+            "from_seat": from_seat,
+            "to_seat": to_seat,
+            "transferred_at": datetime.now(timezone.utc).isoformat(),
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
+def item_sent(
+        terminal_id: str,
+        order_id: str,
+        item_ids: list[str],
+        **kwargs
+) -> Event:
+    """Create an ITEM_SENT event."""
+    return create_event(
+        event_type=EventType.ITEM_SENT,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "item_ids": item_ids,
+            "sent_at": datetime.now(timezone.utc).isoformat(),
         },
         correlation_id=order_id,
         **kwargs

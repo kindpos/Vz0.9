@@ -29,6 +29,7 @@ class OrderItem:
     category: Optional[str] = None
     notes: Optional[str] = None
     seat_number: Optional[int] = None
+    sent: bool = False
     modifiers: list[dict] = field(default_factory=list)
     added_at: Optional[datetime] = None
 
@@ -217,6 +218,21 @@ def project_order(events: list[Event]) -> Optional[Order]:
                         else:
                             item.modifiers.append(modifier)
                         break
+
+        elif event.event_type == EventType.ITEM_TRANSFERRED:
+            if order:
+                item_id = payload["item_id"]
+                for item in order.items:
+                    if item.item_id == item_id:
+                        item.seat_number = payload["to_seat"]
+                        break
+
+        elif event.event_type == EventType.ITEM_SENT:
+            if order:
+                sent_ids = set(payload.get("item_ids", []))
+                for item in order.items:
+                    if item.item_id in sent_ids:
+                        item.sent = True
 
         # --- DISCOUNTS ---
 
