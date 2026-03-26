@@ -111,11 +111,14 @@ export default function LoginScreen({ onLogin, roster = [] }) {
         <div style={{ width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
             width: 55, height: 55,
-            background: C.bg3, border: `2px solid ${C.mint}`, borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: C.fh, fontSize: 18, color: C.mint,
+            background: 'transparent', border: `2px solid ${C.mint}`,
             animation: 'loginSpin 20s linear infinite',
-          }}>K</div>
+          }} />
+        </div>
+
+        {/* KINDpos title */}
+        <div style={{ fontFamily: C.fh, fontSize: 22, letterSpacing: 3, color: C.mint, textAlign: 'center' }}>
+          KINDpos
         </div>
 
         {/* PIN frame */}
