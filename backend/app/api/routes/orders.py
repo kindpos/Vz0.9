@@ -8,7 +8,8 @@ All mutations go through the Event Ledger.
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
+import logging
 import uuid
 
 from app.config import settings
@@ -19,6 +20,7 @@ from app.core.events import (
     item_added,
     item_removed,
     item_modified,
+    item_sent,
     modifier_applied,
     payment_initiated,
     payment_confirmed,
@@ -28,7 +30,16 @@ from app.core.events import (
     ticket_printed,
 )
 from app.core.projections import project_order, project_orders, Order
+from app.api.dependencies import get_printer_manager
+from app.core.adapters.printer_manager import PrinterManager
+from app.core.adapters.base_printer import (
+    PrintJob,
+    PrintJobType,
+    PrintJobContent,
+    OrderContext,
+)
 
+logger = logging.getLogger("kindpos.orders")
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
@@ -106,6 +117,8 @@ class OrderItemResponse(BaseModel):
     notes: Optional[str]
     modifiers: list[dict]
     subtotal: float
+    sent: bool = False
+    sent_at: Optional[datetime] = None
 
 
 class OrderResponse(BaseModel):
@@ -148,6 +161,8 @@ class OrderResponse(BaseModel):
                     notes=item.notes,
                     modifiers=item.modifiers,
                     subtotal=item.subtotal,
+                    sent=item.sent,
+                    sent_at=item.sent_at,
                 )
                 for item in order.items
             ],
@@ -551,3 +566,119 @@ async def void_order(
 
     order = await get_order_or_404(ledger, order_id)
     return OrderResponse.from_order(order)
+
+
+# =============================================================================
+# CATEGORY → PRINTER ROLE MAPPING
+# =============================================================================
+
+CATEGORY_ROLE_MAP = {
+    "food": "kitchen",
+    "appetizer": "kitchen",
+    "entree": "kitchen",
+    "dessert": "kitchen",
+    "side": "kitchen",
+    "beverage": "bar",
+    "beer": "bar",
+    "wine": "bar",
+    "cocktail": "bar",
+    "spirit": "bar",
+}
+
+
+def _category_to_role(category: Optional[str]) -> str:
+    """Map item category to printer role. Defaults to kitchen."""
+    if not category:
+        return "kitchen"
+    return CATEGORY_ROLE_MAP.get(category.lower(), "kitchen")
+
+
+# =============================================================================
+# SEND TO KITCHEN
+# =============================================================================
+
+class SentItemResponse(BaseModel):
+    item_id: str
+    name: str
+    category: Optional[str]
+    seat_number: Optional[int]
+
+
+class SendResponse(BaseModel):
+    sent_count: int
+    items: list[SentItemResponse]
+
+
+@router.post("/{order_id}/send", response_model=SendResponse)
+async def send_order(
+        order_id: str,
+        ledger: EventLedger = Depends(get_ledger),
+        printer_manager: Optional[PrinterManager] = Depends(get_printer_manager),
+):
+    """Send unsent items to kitchen/bar printers."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status != "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot send items on {order.status} order"
+        )
+
+    unsent = [item for item in order.items if not item.sent]
+
+    if not unsent:
+        return SendResponse(sent_count=0, items=[])
+
+    sent_at = datetime.now(timezone.utc).isoformat()
+    sent_items = []
+
+    for item in unsent:
+        event = item_sent(
+            terminal_id=settings.terminal_id,
+            order_id=order_id,
+            item_id=item.item_id,
+            name=item.name,
+            seat_number=item.seat_number,
+            category=item.category,
+            sent_at=sent_at,
+        )
+        await ledger.append(event)
+        sent_items.append(SentItemResponse(
+            item_id=item.item_id,
+            name=item.name,
+            category=item.category,
+            seat_number=item.seat_number,
+        ))
+
+    # --- Bridge to printer system ---
+    if printer_manager:
+        try:
+            items_by_role: dict[str, list] = {}
+            for item in unsent:
+                role = _category_to_role(item.category)
+                items_by_role.setdefault(role, []).append(item)
+
+            for role, role_items in items_by_role.items():
+                body_lines = []
+                for item in role_items:
+                    seat_prefix = f"S{item.seat_number} " if item.seat_number else ""
+                    qty = f"{item.quantity}x " if item.quantity > 1 else ""
+                    body_lines.append(f"{seat_prefix}{qty}{item.name}")
+                    if item.notes:
+                        body_lines.append(f"  ** {item.notes}")
+
+                job = PrintJob(
+                    order_id=order_id,
+                    job_type=PrintJobType.KITCHEN_TICKET,
+                    target_role=role,
+                    terminal_id=settings.terminal_id,
+                    content=PrintJobContent(
+                        header_lines=[f"Order: {order_id}", f"Table: {order.table or 'N/A'}"],
+                        body_lines=body_lines,
+                    ),
+                )
+                await printer_manager.submit_job(job)
+        except Exception:
+            logger.exception(f"Printer failed for order {order_id} — send events already recorded")
+
+    return SendResponse(sent_count=len(sent_items), items=sent_items)

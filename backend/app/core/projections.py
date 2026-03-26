@@ -30,6 +30,8 @@ class OrderItem:
     notes: Optional[str] = None
     seat_number: Optional[int] = None
     modifiers: list[dict] = field(default_factory=list)
+    sent: bool = False
+    sent_at: Optional[datetime] = None
     added_at: Optional[datetime] = None
 
     @property
@@ -216,6 +218,15 @@ def project_order(events: list[Event]) -> Optional[Order]:
                             ]
                         else:
                             item.modifiers.append(modifier)
+                        break
+
+        elif event.event_type == EventType.ITEM_SENT:
+            if order:
+                item_id = payload["item_id"]
+                for item in order.items:
+                    if item.item_id == item_id:
+                        item.sent = True
+                        item.sent_at = event.timestamp
                         break
 
         # --- DISCOUNTS ---

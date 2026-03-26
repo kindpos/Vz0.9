@@ -322,6 +322,33 @@ def item_added(
     )
 
 
+def item_sent(
+        terminal_id: str,
+        order_id: str,
+        item_id: str,
+        name: str,
+        seat_number: Optional[int] = None,
+        category: Optional[str] = None,
+        sent_at: Optional[str] = None,
+        **kwargs
+) -> Event:
+    """Create an ITEM_SENT event."""
+    return create_event(
+        event_type=EventType.ITEM_SENT,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "item_id": item_id,
+            "name": name,
+            "seat_number": seat_number,
+            "category": category,
+            "sent_at": sent_at or datetime.now(timezone.utc).isoformat(),
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
 def item_removed(
         terminal_id: str,
         order_id: str,
