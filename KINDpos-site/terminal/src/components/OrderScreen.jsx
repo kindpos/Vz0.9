@@ -38,7 +38,7 @@ const T = {
   }
 };
 
-export default function OrderScreen({ staff, order: initialOrder, onPayment, onSave, setOffline }) {
+export default function OrderScreen({ staff, order: initialOrder, onPayment, onReview, onSave, setOffline }) {
   const [cat, setCat] = useState(null);
   const [order, setOrder] = useState(initialOrder || { items: [], id: null, order_number: "---", order_type: "Walk-up", customer_name: "" });
   const [selIdxs, setSel] = useState([]);
@@ -442,7 +442,7 @@ export default function OrderScreen({ staff, order: initialOrder, onPayment, onS
           {selIdxs.length === 0 ? (
             <>
               <button onClick={() => items.length > 0 && onPayment({ ...order, items, subtotal, tax, total: cardTotal, cardTotal, cashTotal })} style={{ ...T.btn, gridColumn: "span 1", opacity: items.length > 0 ? 1 : 0.5 }}>PAY FULL</button>
-              <button style={{ ...T.btn, gridColumn: "span 1", opacity: items.length > 0 ? 1 : 0.5 }}>SPLIT</button>
+              <button onClick={() => items.length > 0 && onReview(order)} style={{ ...T.btn, gridColumn: "span 1", opacity: items.length > 0 ? 1 : 0.5 }}>REVIEW</button>
               <button onClick={handleHold} style={{ ...T.btn, gridColumn: "span 1", opacity: items.length > 0 ? 1 : 0.5 }}>HOLD</button>
               <button onClick={handleCancelCheck} style={{ ...T.btn, gridColumn: "span 1", color: C.red, borderColor: C.red }}>CANCEL</button>
             </>

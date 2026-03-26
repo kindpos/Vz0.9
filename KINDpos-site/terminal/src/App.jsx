@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
 import SnapshotScreen from './components/SnapshotScreen';
 import OrderScreen from './components/OrderScreen';
+import CheckOverviewScreen from './components/CheckOverviewScreen';
 import PaymentScreen from './components/PaymentScreen';
 import CloseDayScreen from './components/CloseDayScreen';
 import BatchSettleScreen from './components/BatchSettleScreen';
@@ -31,6 +32,7 @@ export default function App() {
   const [menu, setMenu] = useState(null);
   const [offline, setOffline] = useState(false);
   const [roster, setRoster] = useState([]);
+  const [storeConfig, setStoreConfig] = useState(null);
 
   // Load roster once on mount
   useEffect(() => {
@@ -54,15 +56,18 @@ export default function App() {
     Promise.all([
       fetch(`${API_BASE}/api/v1/orders/active`).then(r => r.json()),
       fetch(`${API_BASE}/api/v1/menu`).then(r => r.json()),
+      fetch(`${API_BASE}/api/v1/config/store`).then(r => r.json()).catch(() => null),
     ])
-      .then(([ordersData, menuData]) => {
+      .then(([ordersData, menuData, configData]) => {
         setOrders(ordersData.orders);
         setMenu(menuData.items_by_category);
+        setStoreConfig(configData);
         setOffline(false);
       })
       .catch(() => {
         setOrders([]);
         setMenu(null);
+        setStoreConfig(null);
         setOffline(true);
       });
   }, []);
@@ -79,6 +84,11 @@ export default function App() {
   const goOrder = useCallback((ord) => {
     setOrder(ord);
     setScreen('order');
+  }, []);
+
+  const goReview = useCallback((ord) => {
+    setOrder(ord);
+    setScreen('review');
   }, []);
 
   const goPayment = useCallback((payload) => {
@@ -136,15 +146,27 @@ export default function App() {
         )}
         
         {screen === 'order' && (
-          <OrderScreen 
-            staff={staff} 
-            order={order} 
-            onPayment={goPayment} 
-            onSave={goSave} 
+          <OrderScreen
+            staff={staff}
+            order={order}
+            onPayment={goPayment}
+            onReview={goReview}
+            onSave={goSave}
             setOffline={setOffline}
           />
         )}
         
+        {screen === 'review' && (
+          <CheckOverviewScreen
+            staff={staff}
+            order={order}
+            storeConfig={storeConfig}
+            onPayment={goPayment}
+            onBack={() => setScreen('order')}
+            setOffline={setOffline}
+          />
+        )}
+
         {screen === 'payment' && (
           <PaymentScreen 
             staff={staff} 
