@@ -433,18 +433,22 @@ def payment_confirmed(
         payment_id: str,
         transaction_id: str,
         amount: float,
+        method: Optional[str] = None,
         **kwargs
 ) -> Event:
     """Create a PAYMENT_CONFIRMED event."""
+    payload = {
+        "order_id": order_id,
+        "payment_id": payment_id,
+        "transaction_id": transaction_id,
+        "amount": amount,
+    }
+    if method is not None:
+        payload["method"] = method
     return create_event(
         event_type=EventType.PAYMENT_CONFIRMED,
         terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "payment_id": payment_id,
-            "transaction_id": transaction_id,
-            "amount": amount,
-        },
+        payload=payload,
         correlation_id=order_id,
         **kwargs
     )
@@ -456,18 +460,22 @@ def payment_failed(
         payment_id: str,
         error: str,
         error_code: Optional[str] = None,
+        method: Optional[str] = None,
         **kwargs
 ) -> Event:
     """Create a PAYMENT_FAILED event."""
+    payload = {
+        "order_id": order_id,
+        "payment_id": payment_id,
+        "error": error,
+        "error_code": error_code,
+    }
+    if method is not None:
+        payload["method"] = method
     return create_event(
         event_type=EventType.PAYMENT_FAILED,
         terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "payment_id": payment_id,
-            "error": error,
-            "error_code": error_code,
-        },
+        payload=payload,
         correlation_id=order_id,
         **kwargs
     )
@@ -513,6 +521,32 @@ def order_voided(
             "approved_by": approved_by,
         },
         correlation_id=order_id,
+        **kwargs
+    )
+
+
+# -----------------------------------------------------------------------------
+# Batch Events
+# -----------------------------------------------------------------------------
+
+def batch_closed(
+        terminal_id: str,
+        batch_id: str,
+        order_ids: list,
+        order_count: int,
+        total_amount: float,
+        **kwargs
+) -> Event:
+    """Create a BATCH_CLOSED event."""
+    return create_event(
+        event_type=EventType.BATCH_CLOSED,
+        terminal_id=terminal_id,
+        payload={
+            "batch_id": batch_id,
+            "order_ids": order_ids,
+            "order_count": order_count,
+            "total_amount": total_amount,
+        },
         **kwargs
     )
 

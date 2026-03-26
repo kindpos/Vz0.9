@@ -25,6 +25,7 @@ from app.core.events import (
     payment_failed,
     order_closed,
     order_voided,
+    batch_closed,
     ticket_printed,
 )
 from app.core.projections import project_order, project_orders, Order
@@ -268,6 +269,63 @@ async def list_open_orders(
     return [OrderResponse.from_order(o) for o in open_orders]
 
 
+# ---------------------------------------------------------------------------
+# Batch Operations
+# ---------------------------------------------------------------------------
+
+class BatchCloseResponse(BaseModel):
+    batch_id: str
+    order_count: int
+    total_amount: float
+    order_ids: list[str]
+
+
+@router.post("/close-batch", response_model=BatchCloseResponse)
+async def close_batch(
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Close all paid orders in a batch."""
+    events = await ledger.get_events_since(0, limit=10000)
+    all_orders = project_orders(events)
+
+    paid_orders = {
+        oid: o for oid, o in all_orders.items() if o.status == "paid"
+    }
+
+    closed_ids = []
+    total = 0.0
+
+    for oid, order in paid_orders.items():
+        event = order_closed(
+            terminal_id=settings.terminal_id,
+            order_id=oid,
+            total=order.total,
+        )
+        await ledger.append(event)
+        closed_ids.append(oid)
+        total += order.total
+
+    total = round(total, 2)
+    batch_id = f"batch_{uuid.uuid4().hex[:8]}"
+
+    if closed_ids:
+        event = batch_closed(
+            terminal_id=settings.terminal_id,
+            batch_id=batch_id,
+            order_ids=closed_ids,
+            order_count=len(closed_ids),
+            total_amount=total,
+        )
+        await ledger.append(event)
+
+    return BatchCloseResponse(
+        batch_id=batch_id,
+        order_count=len(closed_ids),
+        total_amount=total,
+        order_ids=closed_ids,
+    )
+
+
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order(
         order_id: str,
@@ -463,8 +521,9 @@ async def confirm_payment(
     """Confirm a payment."""
     order = await get_order_or_404(ledger, order_id)
 
-    # Verify payment exists
-    if not any(p.payment_id == payment_id for p in order.payments):
+    # Verify payment exists and get method
+    payment = next((p for p in order.payments if p.payment_id == payment_id), None)
+    if not payment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Payment {payment_id} not found"
@@ -476,6 +535,7 @@ async def confirm_payment(
         payment_id=payment_id,
         transaction_id=request.transaction_id,
         amount=request.amount,
+        method=payment.method,
     )
     await ledger.append(event)
 
