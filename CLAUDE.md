@@ -97,6 +97,12 @@ Route groups: `orders`, `payment_routes`, `printing`, `menu`, `hardware`, `syste
 
 ---
 
+## Data Conventions
+
+- Employee `role_id` must be a slug: `"manager"` or `"server"` (not a UUID). `SnapshotScreen` checks `staff.role === "manager"` directly.
+
+---
+
 ## Critical rules (do not violate)
 
 - **Never modify the event ledger schema** — existing event types are immutable and cannot be renamed.

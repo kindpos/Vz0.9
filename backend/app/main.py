@@ -20,6 +20,7 @@ from app.api.routes import hardware
 from app.api.routes import printing
 from app.api.routes import payment_routes
 from app.api.routes import config
+from app.api.routes import staff
 
 
 @asynccontextmanager
@@ -66,6 +67,7 @@ app.include_router(hardware.router, prefix="/api/v1")
 app.include_router(printing.router, prefix="/api/v1")
 app.include_router(payment_routes.router, prefix="/api/v1")
 app.include_router(config.router, prefix="/api/v1")
+app.include_router(staff.router, prefix="/api/v1")
 
 
 # Global Static Assets (Fonts)
