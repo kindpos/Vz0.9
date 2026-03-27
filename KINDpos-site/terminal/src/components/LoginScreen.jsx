@@ -110,7 +110,7 @@ export default function LoginScreen({ onLogin, roster = [] }) {
         {/* Spinning logo */}
         <div style={{ width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img
-            src="/src/assets/hero.png"
+            src="/src/assets/palm.jpg"
             alt=""
             style={{
               width: 55, height: 55, objectFit: 'contain',
