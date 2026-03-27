@@ -8,7 +8,8 @@ from ..dependencies import get_ledger
 from ...core.event_ledger import EventLedger
 from ...core.adapters.payment_manager import PaymentManager
 from ...core.adapters.payment_validator import PaymentValidator
-from ...core.adapters.base_payment import TransactionRequest, TransactionResult, ValidationStatus, ValidationResult
+from ...core.adapters.base_payment import TransactionRequest, TransactionResult, ValidationStatus, ValidationResult, PaymentDeviceConfig, PaymentDeviceType
+from ...core.adapters.mock_payment import MockPaymentDevice
 from ...core.events import (
     payment_initiated, payment_confirmed, order_closed, tip_adjusted,
     create_event, EventType,
@@ -20,6 +21,30 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 
 _manager: Optional[PaymentManager] = None
 _validator: Optional[PaymentValidator] = None
+
+_mock_initialized = False
+
+async def _ensure_mock_device(manager: PaymentManager):
+    """Register a MockPaymentDevice if no devices are mapped."""
+    global _mock_initialized
+    if _mock_initialized:
+        return
+    _mock_initialized = True
+    mock = MockPaymentDevice()
+    config = PaymentDeviceConfig(
+        device_id="mock_001",
+        name="Mock Payment Device",
+        device_type=PaymentDeviceType.SMART_TERMINAL,
+        ip_address="127.0.0.1",
+        mac_address="00:00:00:00:00:00",
+        port=8443,
+        protocol="mock",
+        processor_id="mock_processor",
+    )
+    await mock.connect(config)
+    manager.register_device(mock)
+    manager.map_terminal_to_device(settings.terminal_id, "mock_001")
+    manager.map_terminal_to_device("T-01", "mock_001")  # frontend default terminal ID
 
 def get_payment_manager(ledger: EventLedger = Depends(get_ledger)) -> PaymentManager:
     global _manager
@@ -40,6 +65,7 @@ async def process_sale(
     validator: PaymentValidator = Depends(get_payment_validator)
 ):
     """Initiate sale. Returns ValidationResult or TransactionResult."""
+    await _ensure_mock_device(manager)
     # 1. Resolve Device
     device_id = manager._terminal_device_map.get(request.terminal_id)
     device = manager._devices.get(device_id) if device_id else None

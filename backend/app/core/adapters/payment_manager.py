@@ -143,10 +143,12 @@ class PaymentManager:
                 return [serialize(i) for i in obj]
             return obj
 
+        serialized = serialize(payload)
         return create_event(
             event_type=event_type,
             terminal_id=self._terminal_id,
-            payload=serialize(payload)
+            payload=serialized,
+            correlation_id=serialized.get("order_id"),
         )
 
     def _error_result(self, tx_id: str, cat: PaymentErrorCategory, code: str, msg: str) -> TransactionResult:

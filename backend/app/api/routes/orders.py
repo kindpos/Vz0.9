@@ -112,6 +112,16 @@ class OrderItemResponse(BaseModel):
     subtotal: float
 
 
+class PaymentResponse(BaseModel):
+    """Response model for a payment."""
+    payment_id: str
+    amount: float
+    method: str
+    status: str
+    tip_amount: float = 0.0
+    transaction_id: Optional[str] = None
+
+
 class OrderResponse(BaseModel):
     """Response model for an order."""
     order_id: str
@@ -122,6 +132,7 @@ class OrderResponse(BaseModel):
     guest_count: int
     status: str
     items: list[OrderItemResponse]
+    payments: list[PaymentResponse] = []
     subtotal: float
     discount_total: float
     tax: float
@@ -154,6 +165,17 @@ class OrderResponse(BaseModel):
                     subtotal=item.subtotal,
                 )
                 for item in order.items
+            ],
+            payments=[
+                PaymentResponse(
+                    payment_id=p.payment_id,
+                    amount=p.amount,
+                    method=p.method,
+                    status=p.status,
+                    tip_amount=p.tip_amount,
+                    transaction_id=p.transaction_id,
+                )
+                for p in order.payments
             ],
             subtotal=order.subtotal,
             discount_total=order.discount_total,
@@ -270,6 +292,60 @@ async def list_open_orders(
     open_orders = [o for o in orders.values() if o.status == "open"]
     open_orders.sort(key=lambda o: o.created_at or datetime.min, reverse=True)
     return [OrderResponse.from_order(o) for o in open_orders]
+
+
+@router.get("/day-summary")
+async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
+    """Get current day summary without closing anything."""
+    all_events = await ledger.get_events_since(0, limit=50000)
+    all_orders = project_orders(all_events)
+
+    open_count = 0
+    closed_count = 0
+    total_sales = 0.0
+    total_tips = 0.0
+    cash_total = 0.0
+    card_total = 0.0
+    payments_list = []
+
+    for order in all_orders.values():
+        if order.status == "open":
+            open_count += 1
+        elif order.status in ("closed", "paid"):
+            closed_count += 1
+            total_sales += order.total
+            for p in order.payments:
+                if p.status == "confirmed":
+                    payments_list.append({
+                        "order_id": order.order_id,
+                        "payment_id": p.payment_id,
+                        "amount": p.amount,
+                        "method": p.method,
+                        "tip": p.tip_amount,
+                    })
+                    if p.method == "cash":
+                        cash_total += p.amount
+                    else:
+                        card_total += p.amount
+
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            tip_amt = e.payload.get("tip_amount", 0.0)
+            total_tips += tip_amt
+            pid = e.payload.get("payment_id")
+            for pm in payments_list:
+                if pm["payment_id"] == pid:
+                    pm["tip"] = tip_amt
+
+    return {
+        "open_orders": open_count,
+        "closed_orders": closed_count,
+        "total_sales": round(total_sales, 2),
+        "total_tips": round(total_tips, 2),
+        "cash_total": round(cash_total, 2),
+        "card_total": round(card_total, 2),
+        "payments": payments_list,
+    }
 
 
 @router.get("/{order_id}", response_model=OrderResponse)
@@ -717,59 +793,3 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
     }
 
 
-# =============================================================================
-# DAY SUMMARY (read-only)
-# =============================================================================
-
-@router.get("/day-summary")
-async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
-    """Get current day summary without closing anything."""
-    all_events = await ledger.get_events_since(0, limit=50000)
-    all_orders = project_orders(all_events)
-
-    open_count = 0
-    closed_count = 0
-    total_sales = 0.0
-    total_tips = 0.0
-    cash_total = 0.0
-    card_total = 0.0
-    payments_list = []
-
-    for order in all_orders.values():
-        if order.status == "open":
-            open_count += 1
-        elif order.status in ("closed", "paid"):
-            closed_count += 1
-            total_sales += order.total
-            for p in order.payments:
-                if p.status == "confirmed":
-                    payments_list.append({
-                        "order_id": order.order_id,
-                        "payment_id": p.payment_id,
-                        "amount": p.amount,
-                        "method": p.method,
-                        "tip": 0.0,
-                    })
-                    if p.method == "cash":
-                        cash_total += p.amount
-                    else:
-                        card_total += p.amount
-
-    for e in all_events:
-        if e.event_type == EventType.TIP_ADJUSTED:
-            tip_amt = e.payload.get("tip_amount", 0.0)
-            total_tips += tip_amt
-            pid = e.payload.get("payment_id")
-            for pm in payments_list:
-                if pm["payment_id"] == pid:
-                    pm["tip"] = tip_amt
-
-    return {
-        "open_orders": open_count,
-        "closed_orders": closed_count,
-        "total_sales": round(total_sales, 2),
-        "total_tips": round(total_tips, 2),
-        "cash_total": round(cash_total, 2),
-        "card_total": round(card_total, 2),
-        "payments": payments_list,
-    }

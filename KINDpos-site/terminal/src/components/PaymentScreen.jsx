@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { API_BASE } from '../config';
+import { API_BASE, TERMINAL_ID } from '../config';
 
 const C = {
   gray: "#c0c0c0", dg: "#808080", navy: "#000080", blue: "#1084d0",
@@ -39,20 +39,27 @@ export default function PaymentScreen({ staff, payload, onComplete, setOffline }
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(isCash ? {
           order_id: order.id,
           amount: amountToCharge,
           tip: tipAmount,
-          payment_method: isCash ? "cash" : "card",
+          payment_method: "cash",
+        } : {
+          order_id: order.id,
+          amount: amountToCharge,
+          tip_amount: tipAmount,
+          terminal_id: TERMINAL_ID,
+          server_id: staff?.id || "unknown",
         })
       });
       const result = await res.json();
       
-      if (result.success) {
+      const ok = result.success || result.status === "APPROVED";
+      if (ok) {
         setOffline(false);
         onComplete();
       } else {
-        setError(result.error || "Payment failed");
+        setError(result.error?.message || result.error || "Payment failed");
       }
     } catch (e) {
       setError("Network error. Payment state unknown.");

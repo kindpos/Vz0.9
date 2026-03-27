@@ -246,10 +246,14 @@ def project_order(events: list[Event]) -> Optional[Order]:
 
         elif event.event_type == EventType.PAYMENT_INITIATED:
             if order:
+                pid = payload.get("payment_id") or payload.get("transaction_id")
+                amt = payload.get("amount", 0)
+                if isinstance(amt, str):
+                    amt = float(amt)
                 payment = Payment(
-                    payment_id=payload["payment_id"],
-                    amount=payload["amount"],
-                    method=payload["method"],
+                    payment_id=pid,
+                    amount=amt,
+                    method=payload.get("method", payload.get("payment_type", "card")),
                     status="pending",
                     initiated_at=event.timestamp,
                 )
@@ -257,8 +261,9 @@ def project_order(events: list[Event]) -> Optional[Order]:
 
         elif event.event_type == EventType.PAYMENT_CONFIRMED:
             if order:
+                pid = payload.get("payment_id") or payload.get("transaction_id")
                 for payment in order.payments:
-                    if payment.payment_id == payload["payment_id"]:
+                    if payment.payment_id == pid:
                         payment.status = "confirmed"
                         payment.transaction_id = payload.get("transaction_id")
                         payment.confirmed_at = event.timestamp
@@ -270,8 +275,9 @@ def project_order(events: list[Event]) -> Optional[Order]:
 
         elif event.event_type == EventType.PAYMENT_FAILED:
             if order:
+                pid = payload.get("payment_id") or payload.get("transaction_id")
                 for payment in order.payments:
-                    if payment.payment_id == payload["payment_id"]:
+                    if payment.payment_id == pid:
                         payment.status = "failed"
                         payment.error = payload.get("error")
                         break
