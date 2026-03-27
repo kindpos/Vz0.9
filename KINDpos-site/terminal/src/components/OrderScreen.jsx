@@ -8,18 +8,19 @@ const C = {
   black: "#000000",
   gray: "#666666",
   dg: "#444444",
-  red: "#FF4444"
+  red: "#E84040",
+  yellow: "#FBDE42"
 };
 
 const T = {
   header: {
-    fontFamily: "'Alien Encounters', sans-serif",
+    fontFamily: "'Alien Encounters Solid Bold', sans-serif",
     color: C.mint,
     letterSpacing: "2px",
     textTransform: "uppercase"
   },
   body: {
-    fontFamily: "'Sevastopol Interface', monospace",
+    fontFamily: "'Sevastopol Interface', sans-serif",
     color: C.mint
   },
   btn: {
@@ -28,13 +29,14 @@ const T = {
     color: C.mint,
     padding: "8px 12px",
     cursor: "pointer",
-    fontFamily: "'Sevastopol Interface', monospace",
+    fontFamily: "'Sevastopol Interface', sans-serif",
     fontSize: "14px",
     textAlign: "center",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    userSelect: "none"
+    userSelect: "none",
+    borderRadius: "8px"
   }
 };
 
@@ -417,20 +419,20 @@ export default function OrderScreen({ staff, order: initialOrder, onPayment, onR
         </div>
 
         {/* 2.3 Check Footer (Fixed) */}
-        <div style={{ borderTop: `2px solid ${C.mint}`, padding: "8px", ...T.body }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", opacity: 0.8 }}>
+        <div style={{ borderTop: `2px solid ${C.mint}`, padding: "8px", ...T.body, color: C.yellow }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: 3 }}>
             <span>Subtotal</span>
             <span>${subtotal.toFixed(2)}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", opacity: 0.8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: 3 }}>
             <span>Tax</span>
             <span>${tax.toFixed(2)}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "18px", marginTop: "4px", fontWeight: "bold" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "20px", marginTop: "5px", fontWeight: "bold" }}>
             <span>Card Total</span>
             <span>${cardTotal.toFixed(2)}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", color: C.mint + "CC" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", opacity: 0.8 }}>
             <span>Cash Total</span>
             <span>${cashTotal.toFixed(2)}</span>
           </div>

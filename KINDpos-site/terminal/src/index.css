@@ -1,15 +1,20 @@
 @font-face {
-  font-family: 'Alien Encounters';
+  font-family: 'Alien Encounters Solid Bold';
   src: url('./assets/fonts/Alien-Encounters-Solid-Bold.ttf') format('truetype');
-  font-weight: bold;
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Sevastopol Interface';
   src: url('./assets/fonts/Sevastopol Interface.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
-/* KINDpos Terminal — Win98-inspired theme */
+/* KINDpos Terminal — Dark terminal theme */
 *,
 *::before,
 *::after {
@@ -19,20 +24,21 @@
 }
 
 :root {
-  --gray: #c0c0c0;
-  --gray-dark: #808080;
-  --gray-light: #dfdfdf;
-  --navy: #000080;
-  --navy-light: #0000cd;
-  --white: #ffffff;
-  --black: #000000;
-  --mint: #c6ffbb;
-  --yellow: #fbde42;
-  --red-soft: #ff6b6b;
-  --red-btn: #c00020;
-  --gradient-navy: linear-gradient(180deg, #000080 0%, #0000cd 100%);
-  --font: 'Sevastopol Interface', 'MS Sans Serif', Tahoma, sans-serif;
-  --font-size: 11px;
+  --kind-bg: #333333;
+  --kind-bg2: #222222;
+  --kind-bg3: #444444;
+  --kind-mint: #C6FFBB;
+  --kind-yellow: #FBDE42;
+  --kind-red: #E84040;
+  --kind-orange: #FF8C00;
+  --font-heading: 'Alien Encounters Solid Bold', sans-serif;
+  --font-body: 'Sevastopol Interface', sans-serif;
+  --font-size-header: 22px;
+  --font-size-card-header: 18px;
+  --font-size-body: 16px;
+  --font-size-button: 16px;
+  --font-size-financial: 24px;
+  --font-size-total: 28px;
 }
 
 html, body, #root {
@@ -42,33 +48,34 @@ html, body, #root {
 }
 
 body {
-  font-family: var(--font);
-  font-size: var(--font-size);
-  background: var(--gray);
-  color: var(--black);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  background: #1a1a1a;
+  color: var(--kind-mint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   -webkit-font-smoothing: none;
 }
 
 button {
-  font-family: var(--font);
-  font-size: var(--font-size);
+  font-family: var(--font-body);
+  font-size: var(--font-size-button);
   cursor: pointer;
   border: none;
   outline: none;
 }
 
 input, select, textarea {
-  font-family: var(--font);
-  font-size: var(--font-size);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
 }
 
-::-webkit-scrollbar { width: 16px; }
-::-webkit-scrollbar-track {
-  background: var(--gray-light);
-  border: 1px solid var(--gray-dark);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
-::-webkit-scrollbar-thumb {
-  background: var(--gray);
-  border: 2px solid;
-  border-color: var(--white) var(--gray-dark) var(--gray-dark) var(--white);
-}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #222; }
+::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }

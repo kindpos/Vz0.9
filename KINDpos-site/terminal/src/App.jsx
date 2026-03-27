@@ -14,13 +14,9 @@ import HardwareScreen from './components/HardwareScreen';
 import TBar, { SBar } from './components/TBar';
 import { API_BASE, FALLBACK_ROSTER } from './config';
 
-const C = {
-  teal: "#008080"
-};
-
 const T = {
-  desk: { background: C.teal, minHeight: "100vh", display: "flex", flexDirection: "column", padding: 8, boxSizing: "border-box" },
-  win: { background: "#c0c0c0", border: "2px solid", borderColor: "#fff #808080 #808080 #fff", flex: 1, display: "flex", flexDirection: "column", boxShadow: "2px 2px 0 #000", overflow: "hidden" },
+  desk: { background: "#1a1a1a", height: "100vh", width: "100vw", display: "flex", alignItems: "center", justifyContent: "center" },
+  win: { background: "#333333", width: 1024, height: 600, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" },
 };
 
 export default function App() {

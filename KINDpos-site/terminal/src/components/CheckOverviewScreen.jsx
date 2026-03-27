@@ -7,18 +7,19 @@ const C = {
   black: "#000000",
   gray: "#666666",
   dg: "#444444",
-  red: "#FF4444"
+  red: "#E84040",
+  yellow: "#FBDE42"
 };
 
 const T = {
   header: {
-    fontFamily: "'Alien Encounters', sans-serif",
+    fontFamily: "'Alien Encounters Solid Bold', sans-serif",
     color: C.mint,
     letterSpacing: "2px",
     textTransform: "uppercase"
   },
   body: {
-    fontFamily: "'Sevastopol Interface', monospace",
+    fontFamily: "'Sevastopol Interface', sans-serif",
     color: C.mint
   },
   btn: {
@@ -27,13 +28,14 @@ const T = {
     color: C.mint,
     padding: "8px 12px",
     cursor: "pointer",
-    fontFamily: "'Sevastopol Interface', monospace",
+    fontFamily: "'Sevastopol Interface', sans-serif",
     fontSize: "14px",
     textAlign: "center",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    userSelect: "none"
+    userSelect: "none",
+    borderRadius: "8px"
   }
 };
 
@@ -367,7 +369,7 @@ export default function CheckOverviewScreen({ order, storeConfig, onPayment, onB
         >
           PAY SELECTED{selectedSeats.size > 0 ? ` $${selectedSubtotal.toFixed(2)}` : ""}
         </button>
-        <button onClick={handlePayAll} style={{ ...T.btn, flex: 1, background: C.mint, color: C.black }}>PAY ALL</button>
+        <button onClick={handlePayAll} style={{ ...T.btn, flex: 1, background: C.mint, color: C.bg, border: "none" }}>PAY ALL</button>
       </div>
 
       {/* Transfer Overlay */}
