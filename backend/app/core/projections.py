@@ -30,9 +30,9 @@ class OrderItem:
     notes: Optional[str] = None
     seat_number: Optional[int] = None
     modifiers: list[dict] = field(default_factory=list)
+    added_at: Optional[datetime] = None
     sent: bool = False
     sent_at: Optional[datetime] = None
-    added_at: Optional[datetime] = None
 
     @property
     def subtotal(self) -> float:
@@ -52,6 +52,7 @@ class Payment:
     error: Optional[str] = None
     initiated_at: Optional[datetime] = None
     confirmed_at: Optional[datetime] = None
+    tip_amount: float = 0.0
 
 
 @dataclass
@@ -273,6 +274,13 @@ def project_order(events: list[Event]) -> Optional[Order]:
                     if payment.payment_id == payload["payment_id"]:
                         payment.status = "failed"
                         payment.error = payload.get("error")
+                        break
+
+        elif event.event_type == EventType.TIP_ADJUSTED:
+            if order:
+                for payment in order.payments:
+                    if payment.payment_id == payload["payment_id"]:
+                        payment.tip_amount = payload.get("tip_amount", 0.0)
                         break
 
         # --- PRINTING ---

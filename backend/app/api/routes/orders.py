@@ -8,8 +8,7 @@ All mutations go through the Event Ledger.
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, timezone
-import logging
+from datetime import datetime
 import uuid
 
 from app.config import settings
@@ -33,16 +32,7 @@ from app.core.events import (
 )
 from app.core.projections import project_order, project_orders, Order
 from app.core.event_ledger import get_open_orders
-from app.api.dependencies import get_printer_manager
-from app.core.adapters.printer_manager import PrinterManager
-from app.core.adapters.base_printer import (
-    PrintJob,
-    PrintJobType,
-    PrintJobContent,
-    OrderContext,
-)
 
-logger = logging.getLogger("kindpos.orders")
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
@@ -120,8 +110,6 @@ class OrderItemResponse(BaseModel):
     notes: Optional[str]
     modifiers: list[dict]
     subtotal: float
-    sent: bool = False
-    sent_at: Optional[datetime] = None
 
 
 class OrderResponse(BaseModel):
@@ -164,8 +152,6 @@ class OrderResponse(BaseModel):
                     notes=item.notes,
                     modifiers=item.modifiers,
                     subtotal=item.subtotal,
-                    sent=item.sent,
-                    sent_at=item.sent_at,
                 )
                 for item in order.items
             ],
@@ -572,31 +558,6 @@ async def void_order(
 
 
 # =============================================================================
-# CATEGORY → PRINTER ROLE MAPPING
-# =============================================================================
-
-CATEGORY_ROLE_MAP = {
-    "food": "kitchen",
-    "appetizer": "kitchen",
-    "entree": "kitchen",
-    "dessert": "kitchen",
-    "side": "kitchen",
-    "beverage": "bar",
-    "beer": "bar",
-    "wine": "bar",
-    "cocktail": "bar",
-    "spirit": "bar",
-}
-
-
-def _category_to_role(category: Optional[str]) -> str:
-    """Map item category to printer role. Defaults to kitchen."""
-    if not category:
-        return "kitchen"
-    return CATEGORY_ROLE_MAP.get(category.lower(), "kitchen")
-
-
-# =============================================================================
 # SEND TO KITCHEN
 # =============================================================================
 
@@ -616,7 +577,6 @@ class SendResponse(BaseModel):
 async def send_order(
         order_id: str,
         ledger: EventLedger = Depends(get_ledger),
-        printer_manager: Optional[PrinterManager] = Depends(get_printer_manager),
 ):
     """Send unsent items to kitchen/bar printers."""
     order = await get_order_or_404(ledger, order_id)
@@ -627,11 +587,11 @@ async def send_order(
             detail=f"Cannot send items on {order.status} order"
         )
 
-    unsent = [item for item in order.items if not item.sent]
-
+    unsent = [item for item in order.items if not getattr(item, 'sent', False)]
     if not unsent:
         return SendResponse(sent_count=0, items=[])
 
+    from datetime import timezone
     sent_at = datetime.now(timezone.utc).isoformat()
     sent_items = []
 
@@ -652,37 +612,6 @@ async def send_order(
             category=item.category,
             seat_number=item.seat_number,
         ))
-
-    # --- Bridge to printer system ---
-    if printer_manager:
-        try:
-            items_by_role: dict[str, list] = {}
-            for item in unsent:
-                role = _category_to_role(item.category)
-                items_by_role.setdefault(role, []).append(item)
-
-            for role, role_items in items_by_role.items():
-                body_lines = []
-                for item in role_items:
-                    seat_prefix = f"S{item.seat_number} " if item.seat_number else ""
-                    qty = f"{item.quantity}x " if item.quantity > 1 else ""
-                    body_lines.append(f"{seat_prefix}{qty}{item.name}")
-                    if item.notes:
-                        body_lines.append(f"  ** {item.notes}")
-
-                job = PrintJob(
-                    order_id=order_id,
-                    job_type=PrintJobType.KITCHEN_TICKET,
-                    target_role=role,
-                    terminal_id=settings.terminal_id,
-                    content=PrintJobContent(
-                        header_lines=[f"Order: {order_id}", f"Table: {order.table or 'N/A'}"],
-                        body_lines=body_lines,
-                    ),
-                )
-                await printer_manager.submit_job(job)
-        except Exception:
-            logger.exception(f"Printer failed for order {order_id} — send events already recorded")
 
     return SendResponse(sent_count=len(sent_items), items=sent_items)
 
@@ -716,4 +645,131 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     )
     await ledger.append(batch_evt)
 
-    return {"order_count": closed_count}
+    return {"success": True, "order_count": closed_count}
+
+
+# =============================================================================
+# CLOSE DAY (manager action)
+# =============================================================================
+
+@router.post("/close-day")
+async def close_day(ledger: EventLedger = Depends(get_ledger)):
+    """
+    End-of-day: close remaining orders, settle batch, return day summary.
+    """
+    # Close any remaining open orders
+    open_ids = await get_open_orders(ledger)
+    closed_count = 0
+    for oid in open_ids:
+        events = await ledger.get_events_by_correlation(oid)
+        order = project_order(events)
+        if order and order.status in ("open", "paid"):
+            evt = order_closed(
+                terminal_id=settings.terminal_id,
+                order_id=oid,
+                total=order.total,
+            )
+            await ledger.append(evt)
+            closed_count += 1
+
+    # Emit batch closed event
+    batch_evt = create_event(
+        event_type=EventType.BATCH_CLOSED,
+        terminal_id=settings.terminal_id,
+        payload={"order_count": closed_count, "action": "close_day"},
+    )
+    await ledger.append(batch_evt)
+
+    # Build day summary
+    all_events = await ledger.get_events_since(0, limit=50000)
+    all_orders = project_orders(all_events)
+
+    total_orders = len(all_orders)
+    total_sales = 0.0
+    total_tips = 0.0
+    cash_total = 0.0
+    card_total = 0.0
+
+    for order in all_orders.values():
+        if order.status in ("closed", "paid"):
+            total_sales += order.total
+            for p in order.payments:
+                if p.status == "confirmed":
+                    if p.method == "cash":
+                        cash_total += p.amount
+                    else:
+                        card_total += p.amount
+
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            total_tips += e.payload.get("tip_amount", 0.0)
+
+    return {
+        "success": True,
+        "summary": {
+            "total_orders": total_orders,
+            "orders_closed_now": closed_count,
+            "total_sales": round(total_sales, 2),
+            "total_tips": round(total_tips, 2),
+            "cash_total": round(cash_total, 2),
+            "card_total": round(card_total, 2),
+        }
+    }
+
+
+# =============================================================================
+# DAY SUMMARY (read-only)
+# =============================================================================
+
+@router.get("/day-summary")
+async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
+    """Get current day summary without closing anything."""
+    all_events = await ledger.get_events_since(0, limit=50000)
+    all_orders = project_orders(all_events)
+
+    open_count = 0
+    closed_count = 0
+    total_sales = 0.0
+    total_tips = 0.0
+    cash_total = 0.0
+    card_total = 0.0
+    payments_list = []
+
+    for order in all_orders.values():
+        if order.status == "open":
+            open_count += 1
+        elif order.status in ("closed", "paid"):
+            closed_count += 1
+            total_sales += order.total
+            for p in order.payments:
+                if p.status == "confirmed":
+                    payments_list.append({
+                        "order_id": order.order_id,
+                        "payment_id": p.payment_id,
+                        "amount": p.amount,
+                        "method": p.method,
+                        "tip": 0.0,
+                    })
+                    if p.method == "cash":
+                        cash_total += p.amount
+                    else:
+                        card_total += p.amount
+
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            tip_amt = e.payload.get("tip_amount", 0.0)
+            total_tips += tip_amt
+            pid = e.payload.get("payment_id")
+            for pm in payments_list:
+                if pm["payment_id"] == pid:
+                    pm["tip"] = tip_amt
+
+    return {
+        "open_orders": open_count,
+        "closed_orders": closed_count,
+        "total_sales": round(total_sales, 2),
+        "total_tips": round(total_tips, 2),
+        "cash_total": round(cash_total, 2),
+        "card_total": round(card_total, 2),
+        "payments": payments_list,
+    }

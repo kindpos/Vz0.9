@@ -1254,6 +1254,75 @@ def drawer_opened(
     )
 
 
+# -----------------------------------------------------------------------------
+# Staff / Clock Events
+# -----------------------------------------------------------------------------
+
+def user_logged_in(
+        terminal_id: str,
+        employee_id: str,
+        employee_name: str,
+        **kwargs
+) -> Event:
+    """Create a USER_LOGGED_IN event (clock in)."""
+    return create_event(
+        event_type=EventType.USER_LOGGED_IN,
+        terminal_id=terminal_id,
+        payload={
+            "employee_id": employee_id,
+            "employee_name": employee_name,
+        },
+        user_id=employee_id,
+        **kwargs
+    )
+
+
+def user_logged_out(
+        terminal_id: str,
+        employee_id: str,
+        employee_name: str,
+        **kwargs
+) -> Event:
+    """Create a USER_LOGGED_OUT event (clock out)."""
+    return create_event(
+        event_type=EventType.USER_LOGGED_OUT,
+        terminal_id=terminal_id,
+        payload={
+            "employee_id": employee_id,
+            "employee_name": employee_name,
+        },
+        user_id=employee_id,
+        **kwargs
+    )
+
+
+# -----------------------------------------------------------------------------
+# Tip Adjustment Events
+# -----------------------------------------------------------------------------
+
+def tip_adjusted(
+        terminal_id: str,
+        order_id: str,
+        payment_id: str,
+        tip_amount: float,
+        previous_tip: float = 0.0,
+        **kwargs
+) -> Event:
+    """Create a TIP_ADJUSTED event for post-payment tip adjustment."""
+    return create_event(
+        event_type=EventType.TIP_ADJUSTED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "payment_id": payment_id,
+            "tip_amount": tip_amount,
+            "previous_tip": previous_tip,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
 def drawer_open_failed(
         terminal_id: str,
         printer_id: str,
