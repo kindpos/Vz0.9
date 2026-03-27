@@ -61,28 +61,56 @@ const MOCK_HOURLY = [
 ];
 
 function Sparkline({ today = [], lastWeek = [] }) {
-  const max = Math.max(...today, ...lastWeek, 1);
-  const W = 220, H = 36, n = today.length;
-  const bw = Math.floor(W / n) - 2;
+  const max  = Math.max(...today, ...lastWeek, 1);
+  const W = 220, H = 50, pad = 2, pts = today.length;
+  const step = pts > 1 ? W / (pts - 1) : W;
+  const toY  = v => pad + (H - 2 * pad) * (1 - v / max);
+  const lwPts  = lastWeek.map((v, i) => `${i * step},${toY(v)}`).join(' ');
+  const tdPts  = today.map((v, i)    => `${i * step},${toY(v)}`).join(' ');
+  const lwArea = `${lwPts} ${(pts - 1) * step},${H} 0,${H}`;
+  const tdArea = `${tdPts} ${(pts - 1) * step},${H} 0,${H}`;
+  const todayTotal  = today.reduce((a, b) => a + b, 0);
+  const lastTotal   = lastWeek.reduce((a, b) => a + b, 0);
+  const delta       = todayTotal - lastTotal;
+  const deltaPct    = lastTotal > 0 ? ((delta / lastTotal) * 100).toFixed(1) : 0;
+  const deltaColor  = delta >= 0 ? '#44FF88' : '#FF5555';
+
   return (
     <div>
-      <svg width={W} height={H} style={{ display: "block" }}>
-        {today.map((v, i) => {
-          const x = i * (bw + 2);
-          const lw = lastWeek[i] || 0;
-          const hToday = Math.max(2, Math.round((v  / max) * (H - 4)));
-          const hLW    = Math.max(2, Math.round((lw / max) * (H - 4)));
-          return (
-            <g key={i}>
-              <rect x={x} y={H - hLW}    width={bw} height={hLW}    fill={C.mint} opacity={0.3} />
-              <rect x={x} y={H - hToday} width={bw} height={hToday} fill={C.yellow} opacity={0.85} />
-            </g>
-          );
-        })}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3, fontFamily: FB }}>
+        <span style={{ opacity: 0.4 }}>TODAY vs LAST WK</span>
+        <span style={{ color: deltaColor, fontWeight: "bold" }}>{delta >= 0 ? '▲' : '▼'} {Math.abs(deltaPct)}%</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#44FF88" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#44FF88" stopOpacity="0"    />
+          </linearGradient>
+          <linearGradient id="oFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#FF8C00" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#FF8C00" stopOpacity="0"    />
+          </linearGradient>
+        </defs>
+        <polygon points={lwArea} fill="url(#oFill)" />
+        <polyline points={lwPts} fill="none" stroke="#FF8C00" strokeWidth="2"
+          strokeLinejoin="round" strokeLinecap="round" opacity="0.7" />
+        {lastWeek.map((v, i) => <circle key={i} cx={i * step} cy={toY(v)} r="2.5" fill="#FF8C00" opacity="0.7" />)}
+        <polygon points={tdArea} fill="url(#gFill)" />
+        <polyline points={tdPts} fill="none" stroke="#44FF88" strokeWidth="2.5"
+          strokeLinejoin="round" strokeLinecap="round" />
+        {today.map((v, i) => <circle key={i} cx={i * step} cy={toY(v)} r="3" fill="#44FF88" />)}
       </svg>
-      <div style={{ display: "flex", gap: 10, marginTop: 3, fontSize: 9, opacity: 0.55, fontFamily: FB }}>
-        <span style={{ color: C.yellow }}>▪ TODAY</span>
-        <span style={{ color: C.mint }}>▪ LAST WK</span>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, opacity: 0.3, marginTop: 2, fontFamily: FB }}>
+        <span>11a</span><span>2p</span><span>5p</span><span>8p</span>
+      </div>
+      <div style={{ display: "flex", gap: 12, fontSize: 9, marginTop: 3, fontFamily: FB }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <span style={{ width: 12, height: 3, background: "#FF8C00", borderRadius: 2, display: "inline-block" }} />Last wk
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <span style={{ width: 12, height: 3, background: "#44FF88", borderRadius: 2, display: "inline-block" }} />Today
+        </span>
       </div>
     </div>
   );
@@ -109,19 +137,26 @@ function HourlyBars({ data = [] }) {
   );
 }
 
-// ─── Tabs ────────────────────────────────────────────────────────────────────
+// ─── Messenger vertical tabs ──────────────────────────────────────────────────
 
-function Tabs({ tabs, active, onChange }) {
+const MSG_TAB_COLORS = { RECV: "#C6FFBB", SENT: "#00CFCF", ALERTS: "#FF8C00" };
+
+function MessengerTabs({ tabs, active, onChange }) {
   return (
-    <div style={{ display: "flex", gap: 4, marginBottom: 8, flexShrink: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "2px 0", flexShrink: 0 }}>
       {tabs.map(t => (
-        <button key={t} onClick={() => onChange(t)} style={{
-          background: active === t ? C.mint : "transparent",
+        <div key={t} onClick={() => onChange(t)} style={{
+          writingMode: "vertical-rl", textOrientation: "mixed",
+          transform: "rotate(180deg)",
+          background: active === t ? MSG_TAB_COLORS[t] : "#1a1a1a",
           color: active === t ? C.bg : C.mint,
-          border: `1px solid ${C.mint}`,
-          padding: "2px 8px", borderRadius: 4,
-          fontFamily: FB, fontSize: 10, cursor: "pointer",
-        }}>{t}</button>
+          padding: "10px 5px", fontSize: 13,
+          borderRadius: "0 4px 4px 0",
+          cursor: "pointer",
+          fontWeight: active === t ? "bold" : "normal",
+          textAlign: "center", letterSpacing: 2,
+          fontFamily: FB,
+        }}>{t}</div>
       ))}
     </div>
   );
@@ -187,45 +222,61 @@ function EmptySlot({ slot, onClick }) {
   );
 }
 
-const EB = {
-  background: C.bg, color: C.mint, border: "none",
-  padding: "4px 10px", fontFamily: FB, fontSize: 11,
-  cursor: "pointer", borderRadius: 4,
-};
+const eBtn = (bg, color, bordered = false) => ({
+  background: bg, color,
+  border: bordered ? `1px solid ${C.mint}44` : "none",
+  padding: "14px", borderRadius: 6,
+  fontFamily: FB, fontSize: 15, cursor: "pointer",
+});
 
 function EditBar({ orders, onClose, onOpenOrder }) {
   const multi = orders.length > 1;
+  const o     = orders[0];
+  const rawTotal = typeof o.total === 'string' ? parseFloat(o.total.replace("$", "")) : (o.total ?? 0);
+  const total    = !isNaN(rawTotal) ? rawTotal : 0;
+
   return (
     <div style={{
-      background: C.mint, color: C.bg, padding: "0 10px",
-      fontFamily: FH, fontSize: 12, height: 36, flexShrink: 0,
-      display: "flex", alignItems: "center", gap: 8,
-      position: "absolute", bottom: 0, left: 0, right: 0,
+      position: "absolute", inset: 0, pointerEvents: "none",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10,
     }}>
-      <span style={{ flex: 1, fontSize: 11 }}>
-        {multi
-          ? `EDIT: ${orders.length} SELECTED`
-          : `EDIT: ${orders[0].table || orders[0].label || orders[0].order_id || orders[0].id}`}
-      </span>
-      <div style={{ display: "flex", gap: 6 }}>
-        {!multi && (
-          <>
-            <button onClick={() => onOpenOrder && onOpenOrder(orders[0])} style={EB}>OPEN</button>
-            <button style={EB}>PRINT</button>
-            <button style={EB}>PAY</button>
-          </>
+      <div style={{
+        pointerEvents: "auto",
+        background: "#2a2a2a", border: `2px solid ${C.mint}`,
+        borderRadius: 10, padding: 14, minWidth: 260,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.55)",
+        fontFamily: FB, color: C.mint,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontFamily: FH, fontSize: 16 }}>
+              {multi ? `${orders.length} CHECKS` : (o.table || o.label || o.order_id || o.id)}
+            </div>
+            {!multi && (
+              <div style={{ fontSize: 13, opacity: 0.35 }}>
+                {o.guest_count ?? '—'} guest{o.guest_count !== 1 ? 's' : ''}
+                {' · '}<span style={{ color: C.yellow }}>${total.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+          <div onClick={onClose} style={{
+            cursor: "pointer", fontSize: 18, fontWeight: "bold",
+            width: 28, height: 28, display: "flex", alignItems: "center",
+            justifyContent: "center", borderRadius: "50%", background: "#1a1a1a",
+          }}>✕</div>
+        </div>
+        {!multi ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <button onClick={() => onOpenOrder && onOpenOrder(o)} style={eBtn(C.mint, C.bg)}>Open</button>
+            <button style={eBtn(C.bg, C.mint, true)}>Print</button>
+            <button style={{ ...eBtn("#FFD700", C.bg), gridColumn: "1 / 3" }}>Pay</button>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <button style={eBtn(C.mint, C.bg)}>Merge</button>
+            <button style={eBtn(C.bg, C.mint, true)}>Print All</button>
+          </div>
         )}
-        {multi && (
-          <>
-            <button style={EB}>MERGE</button>
-            <button style={EB}>PRINT ALL</button>
-          </>
-        )}
-        <div onClick={onClose} style={{
-          width: 24, height: 24, display: "flex", alignItems: "center",
-          justifyContent: "center", border: `2px solid ${C.bg}`,
-          borderRadius: 4, fontWeight: "bold", fontSize: 18, cursor: "pointer",
-        }}>+</div>
       </div>
     </div>
   );
@@ -369,6 +420,7 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
     <div style={{
       flex: 1, display: "grid",
       gridTemplateColumns: "278px 408px 278px",
@@ -416,13 +468,13 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
               ))}
             </>
           ) : (
-            // ── Server: personal stats + 86 list if any
+            // ── Server: personal stats + specials + 86 list
             <>
               {[
-                ["Opened",     "08:15 AM",               C.mint  ],
-                ["My Checks",  String(mine.length),       C.mint  ],
+                ["Opened",     "08:15 AM",                C.mint  ],
+                ["My Checks",  String(mine.length),        C.mint  ],
                 ["My Gross",   `$${grossMine.toFixed(2)}`, C.yellow],
-                ["Open Floor", String(orders.length),     C.mint  ],
+                ["Open Floor", String(orders.length),      C.mint  ],
               ].map(([k, v, col]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                   <span style={{ opacity: 0.6 }}>{k}</span>
@@ -430,26 +482,51 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
                 </div>
               ))}
 
-              {eightySixed.length > 0 && (
-                <>
-                  <SectionDivider label={`86 LIST — ${eightySixed.length}`} />
-                  {eightySixed.map(item => (
-                    <div key={item.item_id || item.name} style={{ fontSize: 11, color: C.red, fontWeight: "bold", marginBottom: 2 }}>
-                      {item.name}
-                    </div>
-                  ))}
-                </>
-              )}
+              <SectionDivider label="TONIGHT'S SPECIALS" />
+              {MOCK_SPECIALS.length > 0 ? MOCK_SPECIALS.map(s => (
+                <div key={s.name} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: 11 }}>• {s.name}</span>
+                  <span style={{ fontSize: 11, color: C.yellow, fontWeight: "bold" }}>{s.price}</span>
+                </div>
+              )) : <div style={{ fontSize: 10, opacity: 0.4 }}>No specials tonight</div>}
+
+              <SectionDivider label={eightySixed.length > 0 ? `86 LIST — ${eightySixed.length}` : "86 LIST — CLEAR"} />
+              {eightySixed.length === 0 ? (
+                <div style={{ fontSize: 10, opacity: 0.4, fontStyle: "italic" }}>All clear</div>
+              ) : eightySixed.map(item => (
+                <div key={item.item_id || item.name} style={{ fontSize: 11, color: C.red, fontWeight: "bold", marginBottom: 2 }}>
+                  ✕ {item.name}
+                </div>
+              ))}
             </>
           )}
         </Card>
 
         {/* MESSENGER */}
         <Card title="MESSENGER">
-          <Tabs tabs={["RECV", "SENT", "ALERTS"]} active={messengerTab} onChange={setMessengerTab} />
-          {messengerTab === "RECV"   && <div style={{ opacity: 0.4, fontSize: 11, fontStyle: "italic" }}>No new messages</div>}
-          {messengerTab === "SENT"   && <div style={{ opacity: 0.4, fontSize: 11, fontStyle: "italic" }}>No sent messages</div>}
-          {messengerTab === "ALERTS" && <div style={{ opacity: 0.4, fontSize: 11, fontStyle: "italic" }}>No alerts</div>}
+          <div style={{ display: "flex", height: "100%", minHeight: 80 }}>
+            <MessengerTabs
+              tabs={isManager ? ["RECV", "SENT", "ALERTS"] : ["SENT", "ALERTS"]}
+              active={messengerTab}
+              onChange={setMessengerTab}
+            />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingLeft: 6, overflow: "hidden" }}>
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                {messengerTab === "RECV"   && <div style={{ opacity: 0.4, fontSize: 11, fontStyle: "italic" }}>No new messages</div>}
+                {messengerTab === "SENT"   && <div style={{ opacity: 0.4, fontSize: 11, fontStyle: "italic" }}>No sent messages</div>}
+                {messengerTab === "ALERTS" && <div style={{ opacity: 0.4, fontSize: 11, fontStyle: "italic" }}>No alerts</div>}
+              </div>
+              {isManager && (
+                <div style={{ paddingTop: 4, borderTop: `1px solid ${C.mint}22`, flexShrink: 0 }}>
+                  <button style={{
+                    width: "100%", fontSize: 11, padding: "3px 0",
+                    background: C.mint, color: C.bg, border: "none",
+                    borderRadius: 3, cursor: "pointer", fontFamily: FB,
+                  }}>Post Alert</button>
+                </div>
+              )}
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -579,7 +656,7 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
             }}
           >
             <span style={{ fontSize: 11 }}>Settle Batch</span>
-            <span style={{ fontSize: 11, color: C.yellow, fontWeight: "bold" }}>0/0</span>
+            <span style={{ fontSize: 11, color: C.yellow, fontWeight: "bold" }}>0/{orders.length}</span>
           </div>
 
           {/* Role-split CTA */}
@@ -598,54 +675,40 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
 
         {/* HARDWARE */}
         <Card title="HARDWARE">
-          {hwStatus ? (
-            <>
-              {hwStatus.printers && Object.entries(hwStatus.printers).map(([name, status]) => (
-                <div key={name} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                  <span style={{ fontSize: 11, textTransform: "capitalize" }}>{name}</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: "bold",
-                    color: String(status).toLowerCase() === "ok" || String(status).toLowerCase() === "online"
-                      ? C.mint : C.red,
-                  }}>{String(status).toUpperCase()}</span>
-                </div>
-              ))}
-              {hwStatus.terminal && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                  <span style={{ fontSize: 11 }}>Terminal</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: "bold",
-                    color: String(hwStatus.terminal).toLowerCase() === "online" ? C.mint : C.red,
-                  }}>{String(hwStatus.terminal).toUpperCase()}</span>
-                </div>
-              )}
-            </>
-          ) : (
-            // Default fallback status rows
-            [["Printers", "OK"], ["Terminal", "ONLINE"], ["Network", "OK"]].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                <span style={{ fontSize: 11 }}>{k}</span>
-                <span style={{ fontSize: 11, color: C.mint, fontWeight: "bold" }}>{v}</span>
-              </div>
-            ))
-          )}
+          {(() => {
+            // Build a unified device list from hwStatus or fallback
+            const devices = hwStatus ? [
+              ...(hwStatus.printers
+                ? Object.entries(hwStatus.printers).map(([name, status]) => ({
+                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    ok: ["ok","online"].includes(String(status).toLowerCase()),
+                    detail: String(status),
+                  }))
+                : [{ name: "Printers", ok: true, detail: "2 online" }]),
+              hwStatus.terminal
+                ? { name: "Payment",  ok: String(hwStatus.terminal).toLowerCase() === "online", detail: String(hwStatus.terminal) }
+                : null,
+              { name: "Network", ok: true, detail: "LAN active" },
+            ].filter(Boolean) : [
+              { name: "Printers", ok: true,  detail: "2 online"      },
+              { name: "Payment",  ok: true,  detail: "Dejavoo ready" },
+              { name: "Network",  ok: true,  detail: "LAN active"    },
+            ];
 
+            return devices.map(d => (
+              <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 7 }}>
+                <span style={{ fontSize: 16, color: d.ok ? "#44FF88" : C.red }}>{d.ok ? "●" : "✕"}</span>
+                <span>{d.name}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, opacity: 0.5 }}>{d.detail}</span>
+              </div>
+            ));
+          })()}
           <div
             onClick={() => setScreen('hardware')}
-            style={{ fontSize: 10, opacity: 0.4, cursor: "pointer", marginTop: 6 }}
+            style={{ fontSize: 10, opacity: 0.4, cursor: "pointer", marginTop: 4 }}
           >
             Hardware settings →
           </div>
-
-          {/* Manager-only footer settings link */}
-          {isManager && (
-            <div
-              onClick={() => setScreen('settings')}
-              style={{ fontSize: 10, opacity: 0.4, cursor: "pointer", marginTop: 3 }}
-            >
-              Settings →
-            </div>
-          )}
         </Card>
       </div>
 
@@ -657,6 +720,27 @@ export default function SnapshotScreen({ staff, orders, setOrders, onOpenOrder, 
           onCancel={() => setNewSlot(null)}
         />
       )}
+    </div>
+
+    {/* Footer — Settings button (managers only) */}
+    {isManager && (
+      <div style={{
+        flexShrink: 0,
+        borderTop: `1px solid ${C.mint}22`,
+        display: "flex", justifyContent: "flex-end",
+        padding: "4px 10px",
+      }}>
+        <button
+          onClick={() => setScreen("settings")}
+          style={{
+            background: C.bg, color: C.mint,
+            border: `1px solid ${C.mint}44`,
+            padding: "4px 14px", borderRadius: 4,
+            fontFamily: FB, fontSize: 11, cursor: "pointer",
+          }}
+        >⚙ Settings</button>
+      </div>
+    )}
     </div>
   );
 }

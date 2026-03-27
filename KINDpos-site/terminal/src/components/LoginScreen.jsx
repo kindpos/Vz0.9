@@ -109,11 +109,14 @@ export default function LoginScreen({ onLogin, roster = [] }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, width: 180 }}>
         {/* Spinning logo */}
         <div style={{ width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            width: 55, height: 55,
-            background: 'transparent', border: `2px solid ${C.mint}`,
-            animation: 'loginSpin 20s linear infinite',
-          }} />
+          <img
+            src="/src/assets/hero.png"
+            alt=""
+            style={{
+              width: 55, height: 55, objectFit: 'contain',
+              animation: 'loginSpin 20s linear infinite',
+            }}
+          />
         </div>
 
         {/* KINDpos title */}
