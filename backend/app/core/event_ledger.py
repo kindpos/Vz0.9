@@ -333,6 +333,23 @@ class EventLedger:
         rows = await cursor.fetchall()
         return [self._row_to_event(row) for row in rows]
 
+    async def get_last_day_close_sequence(self) -> int:
+        """Get the sequence number of the most recent DAY_CLOSED event.
+
+        Returns 0 if no day has been closed yet, meaning all events
+        are in the 'current day'.
+        """
+        cursor = await self._db.execute(
+            """
+            SELECT sequence_number FROM events
+            WHERE event_type = 'day.closed'
+            ORDER BY sequence_number DESC
+            LIMIT 1
+            """
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else 0
+
     async def get_unsynced_events(self, limit: int = 100) -> list[Event]:
         """Get events that haven't been synced to cloud."""
         cursor = await self._db.execute(

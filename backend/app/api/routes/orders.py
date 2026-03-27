@@ -27,6 +27,8 @@ from app.core.events import (
     order_closed,
     order_voided,
     ticket_printed,
+    batch_submitted,
+    day_closed,
     create_event,
     EventType,
 )
@@ -34,6 +36,16 @@ from app.core.projections import project_order, project_orders, Order
 from app.core.event_ledger import get_open_orders
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+
+
+# =============================================================================
+# DAY BOUNDARY HELPER
+# =============================================================================
+
+async def get_current_day_events(ledger: EventLedger, limit: int = 50000) -> list:
+    """Get events since the last day close (current business day)."""
+    boundary = await ledger.get_last_day_close_sequence()
+    return await ledger.get_events_since(boundary, limit=limit)
 
 
 # =============================================================================
@@ -249,7 +261,7 @@ async def list_orders(
 ):
     """List orders with optional filters."""
     # Get recent events (last 1000)
-    events = await ledger.get_events_since(0, limit=10000)
+    events = await get_current_day_events(ledger, limit=10000)
     orders = project_orders(events)
 
     # Apply filters
@@ -275,7 +287,7 @@ async def list_active_orders(
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Get all active (open or printed) orders."""
-    events = await ledger.get_events_since(0, limit=10000)
+    events = await get_current_day_events(ledger, limit=10000)
     orders = project_orders(events)
     active_orders = [o for o in orders.values() if o.status in ["open", "printed"]]
     active_orders.sort(key=lambda o: o.created_at or datetime.min, reverse=True)
@@ -287,7 +299,7 @@ async def list_open_orders(
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Get all open orders."""
-    events = await ledger.get_events_since(0, limit=10000)
+    events = await get_current_day_events(ledger, limit=10000)
     orders = project_orders(events)
     open_orders = [o for o in orders.values() if o.status == "open"]
     open_orders.sort(key=lambda o: o.created_at or datetime.min, reverse=True)
@@ -297,7 +309,7 @@ async def list_open_orders(
 @router.get("/day-summary")
 async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
     """Get current day summary without closing anything."""
-    all_events = await ledger.get_events_since(0, limit=50000)
+    all_events = await get_current_day_events(ledger)
     all_orders = project_orders(all_events)
 
     open_count = 0
@@ -346,6 +358,23 @@ async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
         "card_total": round(card_total, 2),
         "payments": payments_list,
     }
+
+
+@router.get("/day-history")
+async def get_day_history(ledger: EventLedger = Depends(get_ledger)):
+    """Get all closed day summaries for audit/reporting.
+
+    Each entry is the stored payload from a DAY_CLOSED event.
+    """
+    day_events = await ledger.get_events_by_type(EventType.DAY_CLOSED)
+    return [
+        {
+            "event_id": e.event_id,
+            "closed_at": e.timestamp.isoformat() if e.timestamp else None,
+            **e.payload,
+        }
+        for e in day_events
+    ]
 
 
 @router.get("/{order_id}", response_model=OrderResponse)
@@ -698,9 +727,10 @@ async def send_order(
 
 @router.post("/close-batch")
 async def close_batch(ledger: EventLedger = Depends(get_ledger)):
-    """Close all open orders and record a batch.closed event."""
+    """Close all open orders, compute batch totals, and emit settlement events."""
     open_ids = await get_open_orders(ledger)
     closed_count = 0
+    closed_order_ids = []
 
     for oid in open_ids:
         events = await ledger.get_events_by_correlation(oid)
@@ -713,7 +743,39 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
             )
             await ledger.append(evt)
             closed_count += 1
+            closed_order_ids.append(oid)
 
+    # Compute batch totals from current-day orders
+    day_events = await get_current_day_events(ledger)
+    all_orders = project_orders(day_events)
+
+    batch_total = 0.0
+    batch_cash = 0.0
+    batch_card = 0.0
+    all_order_ids = []
+    for order in all_orders.values():
+        if order.status in ("closed", "paid"):
+            batch_total += order.total
+            all_order_ids.append(order.order_id)
+            for p in order.payments:
+                if p.status == "confirmed":
+                    if p.method == "cash":
+                        batch_cash += p.amount
+                    else:
+                        batch_card += p.amount
+
+    # Emit BATCH_SUBMITTED with full settlement record
+    submit_evt = batch_submitted(
+        terminal_id=settings.terminal_id,
+        order_count=len(all_order_ids),
+        total_amount=batch_total,
+        cash_total=batch_cash,
+        card_total=batch_card,
+        order_ids=all_order_ids,
+    )
+    await ledger.append(submit_evt)
+
+    # Keep BATCH_CLOSED for backward compatibility
     batch_evt = create_event(
         event_type=EventType.BATCH_CLOSED,
         terminal_id=settings.terminal_id,
@@ -721,7 +783,14 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     )
     await ledger.append(batch_evt)
 
-    return {"success": True, "order_count": closed_count}
+    return {
+        "success": True,
+        "orders_closed_now": closed_count,
+        "batch_total": round(batch_total, 2),
+        "cash_total": round(batch_cash, 2),
+        "card_total": round(batch_card, 2),
+        "order_count": len(all_order_ids),
+    }
 
 
 # =============================================================================
@@ -731,7 +800,9 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
 @router.post("/close-day")
 async def close_day(ledger: EventLedger = Depends(get_ledger)):
     """
-    End-of-day: close remaining orders, settle batch, return day summary.
+    End-of-day: close remaining orders, settle batch, store auditable
+    day summary as a DAY_CLOSED event. After this, the next business
+    day starts fresh — all day-scoped queries will only see new events.
     """
     # Close any remaining open orders
     open_ids = await get_open_orders(ledger)
@@ -748,16 +819,8 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
             await ledger.append(evt)
             closed_count += 1
 
-    # Emit batch closed event
-    batch_evt = create_event(
-        event_type=EventType.BATCH_CLOSED,
-        terminal_id=settings.terminal_id,
-        payload={"order_count": closed_count, "action": "close_day"},
-    )
-    await ledger.append(batch_evt)
-
-    # Build day summary
-    all_events = await ledger.get_events_since(0, limit=50000)
+    # Build day summary BEFORE emitting boundary events
+    all_events = await get_current_day_events(ledger)
     all_orders = project_orders(all_events)
 
     total_orders = len(all_orders)
@@ -765,12 +828,16 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
     total_tips = 0.0
     cash_total = 0.0
     card_total = 0.0
+    order_ids = []
+    payment_count = 0
 
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
             total_sales += order.total
+            order_ids.append(order.order_id)
             for p in order.payments:
                 if p.status == "confirmed":
+                    payment_count += 1
                     if p.method == "cash":
                         cash_total += p.amount
                     else:
@@ -780,16 +847,49 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         if e.event_type == EventType.TIP_ADJUSTED:
             total_tips += e.payload.get("tip_amount", 0.0)
 
-    return {
-        "success": True,
-        "summary": {
-            "total_orders": total_orders,
-            "orders_closed_now": closed_count,
-            "total_sales": round(total_sales, 2),
-            "total_tips": round(total_tips, 2),
-            "cash_total": round(cash_total, 2),
-            "card_total": round(card_total, 2),
-        }
+    # First event timestamp = when the day started
+    opened_at = all_events[0].timestamp.isoformat() if all_events else None
+
+    # Emit BATCH_SUBMITTED (settlement record)
+    submit_evt = batch_submitted(
+        terminal_id=settings.terminal_id,
+        order_count=total_orders,
+        total_amount=total_sales,
+        cash_total=cash_total,
+        card_total=card_total,
+        order_ids=order_ids,
+    )
+    await ledger.append(submit_evt)
+
+    # Emit DAY_CLOSED — this is the auditable snapshot and day boundary
+    today = datetime.now().strftime("%Y-%m-%d")
+    close_evt = day_closed(
+        terminal_id=settings.terminal_id,
+        date=today,
+        total_orders=total_orders,
+        total_sales=total_sales,
+        total_tips=total_tips,
+        cash_total=cash_total,
+        card_total=card_total,
+        order_ids=order_ids,
+        payment_count=payment_count,
+        opened_at=opened_at,
+    )
+    await ledger.append(close_evt)
+
+    summary = {
+        "date": today,
+        "total_orders": total_orders,
+        "orders_closed_now": closed_count,
+        "total_sales": round(total_sales, 2),
+        "total_tips": round(total_tips, 2),
+        "cash_total": round(cash_total, 2),
+        "card_total": round(card_total, 2),
+        "order_ids": order_ids,
+        "payment_count": payment_count,
+        "opened_at": opened_at,
     }
+
+    return {"success": True, "summary": summary}
 
 

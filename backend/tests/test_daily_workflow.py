@@ -36,6 +36,8 @@ from app.core.events import (
     payment_confirmed,
     order_closed,
     tip_adjusted,
+    batch_submitted,
+    day_closed,
     create_event,
 )
 from app.core.projections import project_order, project_orders
@@ -261,15 +263,33 @@ async def test_full_daily_workflow(ledger):
     assert card_payment.tip_amount == 12.40
 
     # ─── 11. BATCH SETTLE ────────────────────────────────────────
-    batch_evt = create_event(
+    # Compute totals for batch submission
+    pre_close_events = await ledger.get_events_since(0, limit=50000)
+    pre_close_orders = project_orders(pre_close_events)
+    total_sales = sum(o.total for o in pre_close_orders.values() if o.status in ("closed", "paid"))
+
+    submit_evt = batch_submitted(
+        terminal_id=TERMINAL,
+        order_count=2,
+        total_amount=total_sales,
+        cash_total=pre_close_orders[order1_id].total,
+        card_total=pre_close_orders[order2_id].total,
+        order_ids=[order1_id, order2_id],
+    )
+    await ledger.append(submit_evt)
+
+    batch_events = await ledger.get_events_by_type(EventType.BATCH_SUBMITTED)
+    assert len(batch_events) == 1
+    assert batch_events[0].payload["order_count"] == 2
+    assert batch_events[0].payload["total_amount"] == round(total_sales, 2)
+
+    # Also emit BATCH_CLOSED for backward compat
+    batch_close_evt = create_event(
         event_type=EventType.BATCH_CLOSED,
         terminal_id=TERMINAL,
-        payload={"order_count": 0},  # all already closed
+        payload={"order_count": 0},
     )
-    await ledger.append(batch_evt)
-
-    batch_events = await ledger.get_events_by_type(EventType.BATCH_CLOSED)
-    assert len(batch_events) == 1
+    await ledger.append(batch_close_evt)
 
     # ─── 12. CLOCK OUT ───────────────────────────────────────────
     clock_out_evt = user_logged_out(
@@ -282,7 +302,43 @@ async def test_full_daily_workflow(ledger):
     logout_events = await ledger.get_events_by_type(EventType.USER_LOGGED_OUT)
     assert len(logout_events) == 1
 
-    # ─── 13. VERIFY FULL EVENT TRAIL ─────────────────────────────
+    # ─── 13. CLOSE DAY ─────────────────────────────────────────
+    close_day_evt = day_closed(
+        terminal_id=TERMINAL,
+        date="2026-03-27",
+        total_orders=2,
+        total_sales=total_sales,
+        total_tips=12.40,
+        cash_total=pre_close_orders[order1_id].total,
+        card_total=pre_close_orders[order2_id].total,
+        order_ids=[order1_id, order2_id],
+        payment_count=2,
+    )
+    await ledger.append(close_day_evt)
+
+    # Verify DAY_CLOSED event is stored with full summary
+    day_events = await ledger.get_events_by_type(EventType.DAY_CLOSED)
+    assert len(day_events) == 1
+    day_payload = day_events[0].payload
+    assert day_payload["date"] == "2026-03-27"
+    assert day_payload["total_orders"] == 2
+    assert day_payload["total_sales"] == round(total_sales, 2)
+    assert day_payload["total_tips"] == 12.40
+    assert len(day_payload["order_ids"]) == 2
+    assert day_payload["payment_count"] == 2
+    assert "closed_at" in day_payload
+
+    # ─── 14. VERIFY DAY BOUNDARY ───────────────────────────────
+    # After DAY_CLOSED, the day boundary should be set
+    boundary_seq = await ledger.get_last_day_close_sequence()
+    assert boundary_seq > 0
+
+    # Events after the boundary should be empty (no new orders)
+    new_day_events = await ledger.get_events_since(boundary_seq, limit=50000)
+    new_day_orders = project_orders(new_day_events)
+    assert len(new_day_orders) == 0  # new day is clean
+
+    # ─── 15. VERIFY FULL EVENT TRAIL ─────────────────────────────
     all_events = await ledger.get_events_since(0, limit=50000)
     all_orders = project_orders(all_events)
 
@@ -291,7 +347,7 @@ async def test_full_daily_workflow(ledger):
     assert len(all_orders) == 2
 
     # Verify total event count (rough check)
-    assert len(all_events) >= 15  # clock_in + 2 orders + items + payments + close + tip + batch + clock_out
+    assert len(all_events) >= 18
 
     # Verify event type coverage
     event_types = {e.event_type for e in all_events}
@@ -305,9 +361,10 @@ async def test_full_daily_workflow(ledger):
     assert EventType.ORDER_CLOSED in event_types
     assert EventType.TIP_ADJUSTED in event_types
     assert EventType.BATCH_CLOSED in event_types
+    assert EventType.BATCH_SUBMITTED in event_types
+    assert EventType.DAY_CLOSED in event_types
 
     # Verify sales totals
-    total_sales = sum(o.total for o in all_orders.values())
     assert total_sales > 0
 
     # Verify tips

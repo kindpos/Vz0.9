@@ -116,8 +116,10 @@ class EventType(str, Enum):
     TIP_ADJUST_FAILED = "TIP_ADJUST_FAILED"
     TIP_ADJUSTED = "payment.tip_adjusted"
 
-    # Batch
+    # Batch / Day
     BATCH_CLOSED = "batch.closed"
+    BATCH_SUBMITTED = "batch.submitted"
+    DAY_CLOSED = "day.closed"
 
     # Device
     DEVICE_STATUS_CHANGED = "device.status_changed"
@@ -1336,6 +1338,64 @@ def drawer_open_failed(
         payload={
             "printer_id": printer_id,
             "error": error,
+        },
+        **kwargs
+    )
+
+
+def batch_submitted(
+        terminal_id: str,
+        order_count: int,
+        total_amount: float,
+        cash_total: float,
+        card_total: float,
+        order_ids: list[str],
+        **kwargs
+) -> Event:
+    """Create a BATCH_SUBMITTED event for batch settlement."""
+    return create_event(
+        event_type=EventType.BATCH_SUBMITTED,
+        terminal_id=terminal_id,
+        payload={
+            "order_count": order_count,
+            "total_amount": round(total_amount, 2),
+            "cash_total": round(cash_total, 2),
+            "card_total": round(card_total, 2),
+            "order_ids": order_ids,
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+        },
+        **kwargs
+    )
+
+
+def day_closed(
+        terminal_id: str,
+        date: str,
+        total_orders: int,
+        total_sales: float,
+        total_tips: float,
+        cash_total: float,
+        card_total: float,
+        order_ids: list[str],
+        payment_count: int,
+        opened_at: str | None = None,
+        **kwargs
+) -> Event:
+    """Create a DAY_CLOSED event with full auditable day summary."""
+    return create_event(
+        event_type=EventType.DAY_CLOSED,
+        terminal_id=terminal_id,
+        payload={
+            "date": date,
+            "total_orders": total_orders,
+            "total_sales": round(total_sales, 2),
+            "total_tips": round(total_tips, 2),
+            "cash_total": round(cash_total, 2),
+            "card_total": round(card_total, 2),
+            "order_ids": order_ids,
+            "payment_count": payment_count,
+            "opened_at": opened_at,
+            "closed_at": datetime.now(timezone.utc).isoformat(),
         },
         **kwargs
     )
